@@ -1,0 +1,22 @@
+# Downloaded model inputs and derived statistics.
+/processed_augmented/
+
+# Generated geometry caches; keep the directory placeholders.
+/cached/*
+!/cached/train_geo/
+!/cached/test_geo/
+/cached/train_geo/*
+/cached/test_geo/*
+!/cached/train_geo/.gitkeep
+!/cached/test_geo/.gitkeep
+
+# Optional raw AirFRANS data; retain the release manifest.
+/original/*
+!/original/manifest.json
+
+# Intermediate preprocessing outputs and downloaded archives.
+/_build/
+/*.zip
+/*.tar
+/*.tar.gz
+/*.tgz

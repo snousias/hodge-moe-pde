@@ -33,14 +33,16 @@ One setting controls all data paths: `[data] data_root` in `config.toml`, defaul
 
 ```
 dataset/
-  processed_augmented/   BUNDLED, complete: all 6,600 pool meshes for the full 800/200 split (1.2 GB)
+  processed_augmented/   download separately: all 6,600 pool meshes for the full 800/200 split (1.2 GB)
   cached/                geometry cache, built automatically on first use (~271 GB when complete)
   original/              raw AirFRANS, optional (only eval_lift.py --validate and data regeneration)
 ```
 
-The model input is bundled in full, so training and full evaluation need no download. The
-geometry cache is derived from it and builds itself on first use. Details, including which 8
-of the 16 remeshed variants each training case uses: `dataset/README.md`.
+Download the preprocessed model input into `dataset/processed_augmented/` before training
+or evaluation; see [dataset setup and download instructions](dataset/README.md). The Dropbox
+shared link is pending. Existing checkouts may already contain the full pool. The geometry
+cache is derived from it and builds itself on first use. The dataset README also describes
+which 8 of the 16 remeshed variants each training case uses.
 
 ## 3. Workflows
 
@@ -91,7 +93,7 @@ because this protocol has no validation split. See `docs/RESULTS.md`.
 ### D. Regenerate the mesh pool from raw AirFRANS (optional)
 
 `scripts/generate_dataset/` rebuilds `processed_augmented/` from `dataset/original/` (see its
-README). You do not need this step, because the pool is bundled.
+README). You do not need this step if you download the preprocessed pool.
 
 ### Diagnostics
 

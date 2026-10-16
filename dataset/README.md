@@ -5,16 +5,42 @@ This is where the AirFRANS data lives by default. `[data] data_root = "dataset"`
 
 ```
 dataset/
-  processed_augmented/     the model input: the preprocessed mesh pool (BUNDLED, complete)
+  processed_augmented/     the model input: the preprocessed mesh pool (download separately)
   original/                raw AirFRANS simulations (public dataset), optional, see below
   cached/
     train_geo/             geometry cache, built automatically on first use if missing
     test_geo/
 ```
 
-## `processed_augmented/`: bundled, complete (6,601 files, 1.2 GB)
+## Download the preprocessed dataset
 
-The bundle has every pool file that training and evaluation read for the full official
+**Dropbox download: pending — the dataset shared link has not been supplied yet.**
+
+Download the preprocessed mesh pool from the Dropbox shared link once it is added here.
+Place the extracted `processed_augmented/` folder directly inside this directory:
+`dataset/processed_augmented/<name>__s0.npz`. Avoid an extra nested `dataset/` folder.
+The expected pool contains 6,600 `.npz` mesh files, plus `_global_target_std.npy`
+(6,601 files total, approximately 1.2 GB uncompressed).
+
+The preprocessed pool is required for training and evaluation. The geometry cache is
+built automatically; raw AirFRANS simulations are optional. Downloaded data, caches,
+and preprocessing outputs are covered by [`.gitignore`](.gitignore).
+
+### Existing tracked data
+
+Ignore rules apply to untracked files. This repository currently tracks the mesh pool;
+adding these rules does not remove those files from Git or from past commits. To switch
+to download-only distribution, run this from the repository root, then commit the changes:
+
+```bash
+git rm -r --cached -- dataset/processed_augmented
+```
+
+This keeps the local dataset files on disk. It does not remove data from Git history.
+
+## `processed_augmented/`: contents (6,601 files, 1.2 GB)
+
+The preprocessed dataset has every pool file that training and evaluation read for the full official
 800/200 split:
 
 | part | files | which |
@@ -25,8 +51,8 @@ The bundle has every pool file that training and evaluation read for the full of
 
 **Which 8 training meshes.** The source pool has 16 remeshed variants (`__s0`…`__s15`) per
 training case. `data/dataset.py` keeps `files[:pool_K]` of a *lexicographically* sorted glob,
-so with `pool_K = 8` it picks **s0, s1, s10, s11, s12, s13, s14, s15**, not s0–s7. The bundle
-ships exactly those files. The released checkpoint was trained on them, and the code reads
+so with `pool_K = 8` it picks **s0, s1, s10, s11, s12, s13, s14, s15**, not s0–s7. The released pool
+contains exactly those files. The released checkpoint was trained on them, and the code reads
 nothing else. Training draws one of the 8 at random each time a case is loaded (mesh
 augmentation).
 
