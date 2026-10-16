@@ -39,8 +39,8 @@ The prediction path has four components:
 4. **Field decoder.** The weighted sum of expert representations passes through a decoder with attention across the four output fields.
 
 $$
-g_k(v)=\operatorname{softmax}_k(\ell(v)),\qquad
-h_{\mathrm{mix}}(v)=\sum_{k=1}^{8}g_k(v)\,\operatorname{proj}_k(z_k(v)).
+g_k(v)=\mathrm{softmax}_k(\ell(v)),\qquad
+h_{\mathrm{mix}}(v)=\sum_{k=1}^{8}g_k(v)\,\mathrm{proj}_k(z_k(v)).
 $$
 
 The controller supplies the mixing weights; the experts fit the fields. All eight experts run for every mesh. This is a dense mixture with global attention within each expert.
