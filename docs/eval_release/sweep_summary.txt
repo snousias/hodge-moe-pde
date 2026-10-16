@@ -1,0 +1,240 @@
+---- ckpt_20 ----
+ux         0.0281     0.0990     0.9898     3.4702     1.1525     1.7202
+uy         0.1221     0.1367     0.9799     1.4153     0.8144     1.1012
+p          0.1194     0.1254     0.9823  15279.1887    64.2569    96.4675
+nut        0.2242     0.2326     0.9422     0.0000     0.0001     0.0003
+MEAN       0.1235   (mean per-field relative L2 — headline)
+ux         0.00313     0.01443
+uy         0.01195     0.02066
+p          0.00868     0.03459
+nut        0.06043     0.01753
+VOLUME     0.02105   (mean over fields — benchmark 'Volume' column)
+SURF       0.02180   (mean over fields — benchmark 'Surf' column)
+---- ckpt_40 ----
+ux         0.0384     0.1375     0.9807     6.5509     1.7397     2.3894
+uy         0.1277     0.1443     0.9780     2.0807     0.7378     1.2416
+p          0.1471     0.1542     0.9748  31015.2723    62.2953   131.8442
+nut        0.2167     0.2249     0.9450     0.0000     0.0001     0.0003
+MEAN       0.1325   (mean per-field relative L2 — headline)
+ux         0.00600     0.02691
+uy         0.01414     0.04248
+p          0.00867     0.10134
+nut        0.07961     0.03289
+VOLUME     0.02711   (mean over fields — benchmark 'Volume' column)
+SURF       0.05091   (mean over fields — benchmark 'Surf' column)
+---- ckpt_60 ----
+ux         0.0307     0.1114     0.9862     4.0843     1.2905     1.8739
+uy         0.1680     0.1851     0.9553     2.4907     1.0485     1.4158
+p          0.1961     0.2083     0.9411  25580.9098    88.2574   134.2769
+nut        0.2158     0.2240     0.9470     0.0000     0.0001     0.0003
+MEAN       0.1527   (mean per-field relative L2 — headline)
+ux         0.00581     0.00965
+uy         0.02420     0.02546
+p          0.01784     0.04657
+nut        0.06141     0.01510
+VOLUME     0.02731   (mean over fields — benchmark 'Volume' column)
+SURF       0.02420   (mean over fields — benchmark 'Surf' column)
+---- ckpt_80 ----
+ux         0.0166     0.0582     0.9963     1.1701     0.6656     1.0008
+uy         0.0750     0.0836     0.9923     0.5613     0.4949     0.6815
+p          0.0713     0.0754     0.9930  4193.4459    29.9593    53.2726
+nut        0.1658     0.1721     0.9660     0.0000     0.0000     0.0003
+MEAN       0.0822   (mean per-field relative L2 — headline)
+ux         0.00119     0.00440
+uy         0.00487     0.00775
+p          0.00183     0.01143
+nut        0.05102     0.01711
+VOLUME     0.01473   (mean over fields — benchmark 'Volume' column)
+SURF       0.01017   (mean over fields — benchmark 'Surf' column)
+---- ckpt_100 ----
+ux         0.0185     0.0641     0.9956     1.6375     0.7281     1.1419
+uy         0.0941     0.1062     0.9881     0.9474     0.6603     0.8865
+p          0.1078     0.1134     0.9860  12884.7098    47.2627    90.5578
+nut        0.1661     0.1724     0.9658     0.0000     0.0001     0.0003
+MEAN       0.0966   (mean per-field relative L2 — headline)
+ux         0.00195     0.00519
+uy         0.00905     0.01020
+p          0.00489     0.03763
+nut        0.05246     0.01767
+VOLUME     0.01709   (mean over fields — benchmark 'Volume' column)
+SURF       0.01767   (mean over fields — benchmark 'Surf' column)
+---- ckpt_120 ----
+ux         0.0206     0.0736     0.9944     1.7271     0.7643     1.2445
+uy         0.0971     0.1088     0.9872     0.8185     0.5544     0.8546
+p          0.1074     0.1134     0.9854  9617.1708    49.6196    80.9706
+nut        0.1605     0.1665     0.9702     0.0000     0.0000     0.0002
+MEAN       0.0964   (mean per-field relative L2 — headline)
+ux         0.00144     0.00762
+uy         0.00742     0.01022
+p          0.00483     0.02404
+nut        0.02540     0.00830
+VOLUME     0.00977   (mean over fields — benchmark 'Volume' column)
+SURF       0.01254   (mean over fields — benchmark 'Surf' column)
+---- ckpt_140 ----
+ux         0.0110     0.0390     0.9984     0.5260     0.4150     0.6711
+uy         0.0528     0.0591     0.9961     0.2663     0.3193     0.4733
+p          0.0508     0.0535     0.9967  2227.2768    24.5243    38.6937
+nut        0.1068     0.1108     0.9863     0.0000     0.0000     0.0002
+MEAN       0.0553   (mean per-field relative L2 — headline)
+ux         0.00043     0.00236
+uy         0.00214     0.00427
+p          0.00119     0.00535
+nut        0.01606     0.00582
+VOLUME     0.00495   (mean over fields — benchmark 'Volume' column)
+SURF       0.00445   (mean over fields — benchmark 'Surf' column)
+---- ckpt_160 ----
+ux         0.0155     0.0554     0.9968     1.0026     0.5978     0.9467
+uy         0.0696     0.0778     0.9933     0.4127     0.4194     0.6061
+p          0.0768     0.0807     0.9928  4979.1910    34.4219    59.1584
+nut        0.1388     0.1440     0.9779     0.0000     0.0000     0.0002
+MEAN       0.0752   (mean per-field relative L2 — headline)
+ux         0.00093     0.00409
+uy         0.00337     0.00643
+p          0.00213     0.01370
+nut        0.02416     0.00573
+VOLUME     0.00765   (mean over fields — benchmark 'Volume' column)
+SURF       0.00748   (mean over fields — benchmark 'Surf' column)
+---- ckpt_180 ----
+ux         0.0133     0.0470     0.9977     0.7881     0.5148     0.8180
+uy         0.0657     0.0732     0.9942     0.4126     0.3825     0.5946
+p          0.0570     0.0599     0.9961  3266.0991    24.2787    46.2695
+nut        0.1056     0.1096     0.9867     0.0000     0.0000     0.0002
+MEAN       0.0604   (mean per-field relative L2 — headline)
+ux         0.00061     0.00363
+uy         0.00325     0.00684
+p          0.00161     0.00825
+nut        0.01624     0.00694
+VOLUME     0.00543   (mean over fields — benchmark 'Volume' column)
+SURF       0.00641   (mean over fields — benchmark 'Surf' column)
+---- ckpt_200 ----
+ux         0.0109     0.0388     0.9979     0.7745     0.4125     0.6767
+uy         0.0460     0.0518     0.9972     0.2476     0.2765     0.4416
+p          0.0508     0.0533     0.9969  3521.9076    25.2114    44.2014
+nut        0.0989     0.1025     0.9884     0.0000     0.0000     0.0001
+MEAN       0.0517   (mean per-field relative L2 — headline)
+ux         0.00044     0.00430
+uy         0.00158     0.00541
+p          0.00143     0.01011
+nut        0.01343     0.00405
+VOLUME     0.00422   (mean over fields — benchmark 'Volume' column)
+SURF       0.00597   (mean over fields — benchmark 'Surf' column)
+---- ckpt_220 ----
+ux         0.0125     0.0437     0.9980     0.7208     0.4524     0.7705
+uy         0.0407     0.0460     0.9978     0.1987     0.2078     0.3928
+p          0.0553     0.0580     0.9963  4593.0757    25.5178    49.4071
+nut        0.0954     0.0990     0.9892     0.0000     0.0000     0.0001
+MEAN       0.0510   (mean per-field relative L2 — headline)
+ux         0.00053     0.00340
+uy         0.00126     0.00436
+p          0.00198     0.01265
+nut        0.01290     0.00388
+VOLUME     0.00417   (mean over fields — benchmark 'Volume' column)
+SURF       0.00607   (mean over fields — benchmark 'Surf' column)
+---- ckpt_240 ----
+ux         0.0092     0.0324     0.9989     0.3742     0.3534     0.5639
+uy         0.0462     0.0517     0.9972     0.2348     0.2920     0.4383
+p          0.0507     0.0534     0.9970  2801.7519    25.1543    42.5453
+nut        0.0823     0.0854     0.9916     0.0000     0.0000     0.0001
+MEAN       0.0471   (mean per-field relative L2 — headline)
+ux         0.00033     0.00158
+uy         0.00183     0.00395
+p          0.00146     0.00685
+nut        0.01107     0.00541
+VOLUME     0.00367   (mean over fields — benchmark 'Volume' column)
+SURF       0.00445   (mean over fields — benchmark 'Surf' column)
+---- ckpt_260 ----
+ux         0.0118     0.0418     0.9981     0.6117     0.4893     0.7214
+uy         0.0768     0.0845     0.9916     0.5168     0.4520     0.6600
+p          0.0709     0.0750     0.9935  4455.0648    33.2447    54.4868
+nut        0.0850     0.0882     0.9913     0.0000     0.0000     0.0001
+MEAN       0.0611   (mean per-field relative L2 — headline)
+ux         0.00067     0.00213
+uy         0.00418     0.00820
+p          0.00242     0.01057
+nut        0.00926     0.00344
+VOLUME     0.00413   (mean over fields — benchmark 'Volume' column)
+SURF       0.00609   (mean over fields — benchmark 'Surf' column)
+---- ckpt_280 ----
+ux         0.0082     0.0286     0.9991     0.3001     0.3202     0.5000
+uy         0.0413     0.0465     0.9978     0.1871     0.2744     0.3928
+p          0.0427     0.0449     0.9979  1986.9632    22.3327    35.4695
+nut        0.0666     0.0691     0.9946     0.0000     0.0000     0.0001
+MEAN       0.0397   (mean per-field relative L2 — headline)
+ux         0.00024     0.00137
+uy         0.00153     0.00290
+p          0.00091     0.00532
+nut        0.00636     0.00204
+VOLUME     0.00226   (mean over fields — benchmark 'Volume' column)
+SURF       0.00291   (mean over fields — benchmark 'Surf' column)
+---- ckpt_300 ----
+ux         0.0080     0.0282     0.9992     0.2852     0.3166     0.4907
+uy         0.0341     0.0382     0.9985     0.1241     0.2032     0.3193
+p          0.0403     0.0424     0.9981  1761.2428    20.3950    33.5386
+nut        0.0696     0.0723     0.9942     0.0000     0.0000     0.0001
+MEAN       0.0380   (mean per-field relative L2 — headline)
+ux         0.00024     0.00125
+uy         0.00087     0.00244
+p          0.00077     0.00481
+nut        0.00681     0.00255
+VOLUME     0.00217   (mean over fields — benchmark 'Volume' column)
+SURF       0.00276   (mean over fields — benchmark 'Surf' column)
+---- ckpt_320 ----
+ux         0.0083     0.0290     0.9991     0.2996     0.3194     0.5051
+uy         0.0386     0.0432     0.9981     0.1539     0.2427     0.3606
+p          0.0412     0.0433     0.9980  1559.6571    20.2451    32.6917
+nut        0.0647     0.0671     0.9950     0.0000     0.0000     0.0001
+MEAN       0.0382   (mean per-field relative L2 — headline)
+ux         0.00026     0.00127
+uy         0.00118     0.00266
+p          0.00077     0.00393
+nut        0.00535     0.00225
+VOLUME     0.00189   (mean over fields — benchmark 'Volume' column)
+SURF       0.00253   (mean over fields — benchmark 'Surf' column)
+---- ckpt_340 ----
+ux         0.0067     0.0236     0.9994     0.2069     0.2605     0.4130
+uy         0.0352     0.0395     0.9984     0.1339     0.2217     0.3336
+p          0.0339     0.0357     0.9987  1166.5725    17.3988    27.6694
+nut        0.0601     0.0623     0.9956     0.0000     0.0000     0.0001
+MEAN       0.0340   (mean per-field relative L2 — headline)
+ux         0.00017     0.00093
+uy         0.00111     0.00201
+p          0.00057     0.00298
+nut        0.00575     0.00190
+VOLUME     0.00190   (mean over fields — benchmark 'Volume' column)
+SURF       0.00195   (mean over fields — benchmark 'Surf' column)
+---- ckpt_360 ----
+ux         0.0068     0.0240     0.9994     0.2119     0.2642     0.4194
+uy         0.0316     0.0355     0.9987     0.1104     0.1851     0.3007
+p          0.0370     0.0389     0.9984  1417.4759    19.2186    30.4650
+nut        0.0594     0.0616     0.9957     0.0000     0.0000     0.0001
+MEAN       0.0337   (mean per-field relative L2 — headline)
+ux         0.00017     0.00095
+uy         0.00078     0.00214
+p          0.00066     0.00373
+nut        0.00543     0.00195
+VOLUME     0.00176   (mean over fields — benchmark 'Volume' column)
+SURF       0.00219   (mean over fields — benchmark 'Surf' column)
+---- ckpt_380 ----
+ux         0.0068     0.0239     0.9994     0.2102     0.2655     0.4179
+uy         0.0319     0.0358     0.9987     0.1095     0.1934     0.3010
+p          0.0364     0.0383     0.9985  1389.8124    19.0606    30.0523
+nut        0.0572     0.0593     0.9960     0.0000     0.0000     0.0001
+MEAN       0.0331   (mean per-field relative L2 — headline)
+ux         0.00018     0.00093
+uy         0.00082     0.00196
+p          0.00067     0.00358
+nut        0.00523     0.00181
+VOLUME     0.00172   (mean over fields — benchmark 'Volume' column)
+SURF       0.00207   (mean over fields — benchmark 'Surf' column)
+---- ckpt_400 ----
+ux         0.0068     0.0237     0.9994     0.2074     0.2625     0.4147
+uy         0.0314     0.0352     0.9987     0.1061     0.1916     0.2964
+p          0.0364     0.0383     0.9985  1366.1541    19.0290    29.9635
+nut        0.0571     0.0593     0.9960     0.0000     0.0000     0.0001
+MEAN       0.0329   (mean per-field relative L2 — headline)
+ux         0.00017     0.00091
+uy         0.00080     0.00190
+p          0.00068     0.00343
+nut        0.00515     0.00185
+VOLUME     0.00170   (mean over fields — benchmark 'Volume' column)
+SURF       0.00202   (mean over fields — benchmark 'Surf' column)

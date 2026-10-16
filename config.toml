@@ -1,0 +1,268 @@
+########################################################################################
+# HodgeMoE v57 gated-Hodge vef — overall configuration
+#
+# This is the ONLY file you should need to edit to reproduce or reuse this model. Every
+# other absolute path in the codebase has been removed; the one path below is where they
+# all derive from (see shared/paths.py). Everything else is the exact recipe that trained
+# the released checkpoint (checkpoints/PROVENANCE.md) — change hyperparameters only if you
+# mean to train a different model.
+#
+# What this is: HodgeMoE routes 8 frequency-band-specialised vanilla transformers with a
+# per-vertex gate produced by a 2-layer PSD Hodge-Laplacian branch, for steady-state PDE
+# regression on unstructured meshes (trained/validated on AirFRANS: 2D RANS airfoil flow —
+# u_x, u_y, p, nu_t). Full description: docs/ARCHITECTURE.md.
+#
+# This release is the "vef" variant (internal case v57_gated_hodge_vef_v2): the Hodge
+# controller evolves ALL THREE cochain streams — L0 on vertices, L1 = down+up on edges,
+# L2-down on faces — instead of the vertex stream only (modes = "v", the HodgePDEMoE release).
+# Trained in fp32 (no bf16 autocast anywhere).
+########################################################################################
+
+device    = "cuda"    # "cpu" also works (see training/loop.py); much slower
+seed      = 0         # torch + numpy seeding at startup. Multi-worker data loading and CUDA
+                       # kernels are not bit-deterministic, so this narrows but does not
+                       # eliminate run-to-run variation — see README.md "On reproducibility".
+use_wandb = false      # set true + fill in [wandb] below to log to Weights & Biases
+
+########################################################################################
+# DATA — the one path you need to set
+########################################################################################
+[data]
+# Parent folder that contains processed_augmented/, original/, and cached/ — see
+# dataset/README.md for exactly what goes where. RELATIVE paths (the default below) are
+# resolved against THIS DEPLOYMENT FOLDER, never the current working directory — so the
+# whole deployment folder can be copied or moved anywhere with zero edits, as long as
+# you populate (or symlink into) its bundled dataset/ folder. Use an absolute path instead
+# if your AirFRANS data lives elsewhere (a shared disk, a different mount, ...).
+data_root = "dataset"
+
+########################################################################################
+# DATASET — mesh windowing / geometry-cache construction. Unchanged from the released
+# model. data_root above is the only thing you should need to touch for a fresh setup;
+# `data_root`/`official_split_json` are filled in automatically from it by
+# shared/paths.resolve_data_paths() and should NOT be added here (they would be
+# overwritten). `cache_dir` below is the one exception — it is set EXPLICITLY (also
+# relative to this deployment folder, same portability rule as data_root above), pointing
+# at the exact geometry cache name the released checkpoint was trained/evaluated against.
+# An explicit cache_dir here is authoritative — edit it if your cache lives somewhere
+# else, or delete it to fall back to <data_root>/cache/v34_{train,test}_geo.
+########################################################################################
+[dataset]
+pool_K = 8                    # train-time mesh-augmentation pool size: the FIRST 8 of
+                              # sorted(glob('<name>__s*.npz')) per case — lexicographic, so for
+                              # a 16-variant train case that is s0,s1,s10..s15 (see dataset/README.md)
+feature_cols = [0, 1, 2, 3, 4]
+target_cols  = [0, 1, 2, 3]
+stats_max_samples = 100
+use_bc_injection  = true
+
+[dataset.train.kw]
+use_bc_injection = true
+cache_dir = "dataset/cached/train_geo"
+
+[dataset.train.kw.band_kw]
+ladder = [2, 8, 32]           # smoothing counts -> 4 target-side frequency bands (auxiliary supervision)
+
+[dataset.train.kw.extract_kw]
+mode = "bigbird"
+symmetric_support = true      # symmetrised neighbour lists -> exactly-symmetric (PSD) Hodge stars
+
+[dataset.train.kw.extract_kw.nbor_kw]
+v_max = 256
+e_max = 256
+f_max = 1
+dilations = 1
+v_k = 8
+e_k = 8
+f_k = 8
+clip_nbors = false
+modes = ["l"]
+percs = [1.0]
+
+[dataset.train.kw.extract_kw.geodesic]
+fast_c   = false              # reference Python/graphblas geodesic path (the only one this deployment ships)
+mode     = "hop"               # BFS hop-count rings
+v_max = 256
+e_max = 256
+f_max = 1
+max_hops = 8
+decay = 0.55
+
+[dataset.test.kw]
+use_bc_injection = true
+cache_dir = "dataset/cached/test_geo"
+
+[dataset.test.kw.band_kw]
+ladder = [2, 8, 32]
+
+[dataset.test.kw.extract_kw]
+mode = "bigbird"
+symmetric_support = true
+
+[dataset.test.kw.extract_kw.nbor_kw]
+v_max = 256
+e_max = 256
+f_max = 1
+dilations = 1
+v_k = 8
+e_k = 8
+f_k = 8
+clip_nbors = false
+modes = ["l"]
+percs = [1.0]
+
+[dataset.test.kw.extract_kw.geodesic]
+fast_c   = false
+mode     = "hop"
+v_max = 256
+e_max = 256
+f_max = 1
+max_hops = 8
+decay = 0.55
+
+[dataset.dataloader.train]
+batch_size = 1
+shuffle = true
+num_workers = 0               # the run used 0: worker processes segfaulted/hung on the training machine
+persistent_workers = false
+drop_last = false
+
+[dataset.dataloader.test]
+batch_size = 1
+shuffle = false
+num_workers = 0               # the run used 0: worker processes segfaulted/hung on the training machine
+persistent_workers = false
+drop_last = false
+
+########################################################################################
+# TRAINING — optimiser, loss, LR schedule. Identical to the released checkpoint's run (except ckpt_every).
+########################################################################################
+[train]
+epochs       = 400
+lr           = 1e-3
+ckpt_every   = 20             # the original run used 1 (crash-safety on an unstable machine); no effect on the model
+optimizer    = "adamw"
+weight_decay = 1e-4
+
+# Loss = volume_loss_lambda * MSE(non-wall nodes) + surface_loss_lambda * MSE(wall nodes) — two
+# disjoint terms (every node in exactly one), mirroring the Volume/Surf eval metric exactly.
+distinct_vol_surf   = true
+volume_loss_lambda  = 1.0
+surface_loss_lambda = 1.0
+loss_type            = "mse"
+
+# Lift-integral term: C_L is linear in pressure, so this costs one dot product against the
+# per-mesh weights the dataset ships. OFF here — an earlier ablation (v52) showed it makes the
+# lift metric worse, not better (C_L is sensitive to error correlation, not magnitude; MSE is
+# the reverse) — see docs/ARCHITECTURE.md.
+cl_loss_lambda = 0.0
+cl_loss_scale  = 1.87
+
+# Auxiliary band-reconstruction loss: expert k is pinned to frequency band k of the target,
+# where the bands come from a LEARNED Hodge-Laplacian analyzer (arch/analyzer.py), not a fixed
+# ladder. `detach_band_targets` cuts the analyzer's gradient from this term (it is driven only
+# by the floor-guard term below) — the fix that made the learned analyzer beat the fixed one.
+band_loss_lambda    = 0.5
+detach_band_targets = true
+
+# One-sided floor guard: penalise a band only if its energy share drops below band_min_share
+# (a "starved" band) — replaces naive entropy-maximisation, which forces an artificial balance
+# across bands that hurts fields whose true energy is genuinely lopsided (nu_t is 40% in the
+# sharpest band; u_x/u_y/p are 90-98% smooth).
+floor_lambda   = 1.0
+band_min_share = 0.02
+
+balance_lambda = 0.01         # keeps the gate from collapsing onto a single expert
+huber_delta    = 1.0
+
+per_case_norm       = true    # relative (per-sample, per-field) loss normalisation
+per_case_norm_floor = 0.1
+
+[train.schedule]
+type              = "onecycle"   # per-batch OneCycleLR: 4e-5 -> 1e-3 @30% -> ~4e-9 (cosine)
+pct_start         = 0.3
+div_factor        = 25.0
+final_div_factor  = 1e4
+
+########################################################################################
+# MODEL
+########################################################################################
+[train.model]
+v_in = 9        # pos(2) + dual_area(1) + inlet_velocity(2) + SDF(1) + wall_normals(2) + is_wall(1)
+e_in = 21        # unused by this model (no mesh streams in the vanilla-transformer experts);
+f_in = 13        # kept for signature compatibility with the shared trainer/dataset.
+
+d_v = 192
+d_e = 192
+d_f = 192
+d_hidden = 768
+
+n_layers = 2               # unused (kept for signature compatibility)
+n_transformer = 4          # unused — the experts carry their own transformer blocks
+
+dropout = 0.1
+modes   = "vef"                # controller evolves vertex (L0), edge (L1) and face (L2-down) streams
+
+out_channels    = 4        # u_x, u_y, p, nu_t
+head_hidden     = [128, 128, 64]
+head_activation = "gelu"
+
+# ── the Hodge spectral controller — reads the mesh, produces the per-vertex expert gate,
+#    never predicts a field. modes = "vef": three operators per layer (vertices L0, edges
+#    L1 = L1down + L1up, faces L2down); star2 is diagonal (learned per-face scaling) because the
+#    face support is one column wide — see docs/ARCHITECTURE.md.
+[train.model.hodge_gate_kw]
+d              = 64
+d_hidden       = 256
+heads          = 4
+n_layers       = 2
+readout_hidden = 64
+window         = 64            # vertex support truncation (inner 64 of 256)
+window_e       = 32            # edge support truncation for the e/f operators (edges outnumber vertices ~3:1)
+modes          = "vef"         # THE setting that defines this release
+
+# ── the learned Hodge-Laplacian analyzer that defines the target-side frequency bands
+[train.model.analyzer_kw]
+hidden     = 64
+ladder     = [2, 4, 6, 8, 12, 16, 24, 32]
+learn_mass = false
+
+# ── the 8 frequency experts + gate mixing
+[train.model.moe_kw]
+n_experts         = 8
+d_expert          = 88
+blocks_per_expert = 2
+heads             = 8
+d_hidden_expert   = 352
+n_freq            = 8
+gate_hidden       = 64
+sigmas            = [1.0, 1.7, 2.8, 4.8, 8.0, 13.5, 22.6, 38.0]   # per-expert Fourier-feature scale
+                                                                    # (fixed buffer in this release; see
+                                                                    # docs/ARCHITECTURE.md "Known limitations")
+
+[train.model.embed_kw]
+n = 2
+
+[train.model.attn_kw]
+h = 12                          # Hodge-gate attention heads (head_dim 16); Gaussian kernel, sigma/beta learned per head
+
+[train.model.attn_basic_kw]     # unused by this model; kept for signature compatibility
+h            = 4
+dropout_attn = 0.0
+norm_type    = false
+attn_type    = "full-linear-fast-transformers"
+
+[train.model.decoder_kw]
+n_dec_layers   = 2
+dec_heads      = 4
+readout_hidden = 64
+
+########################################################################################
+# LOGGING — only used if use_wandb = true above
+########################################################################################
+[wandb]
+WANDB_MODE = "online"
+name       = "HodgeMoE-v57-gated-hodge-vef"
+
+[wandb.init]
+project = "HodgeMoE"

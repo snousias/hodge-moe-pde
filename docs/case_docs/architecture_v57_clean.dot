@@ -1,0 +1,66 @@
+// v57_gated_hodge_vef — CLEAN, COMPACT, GRID view for a narrow (arXiv-column) figure.
+// Portrait, orthogonal (straight) edges, boxes on a 3-column grid, large fonts.
+// Render:  dot -Tpng -Gdpi=200 architecture_v57_clean.dot -o architecture_v57_clean.png
+//          dot -Tpdf architecture_v57_clean.dot -o architecture_v57_clean.pdf
+digraph v57_clean {
+  rankdir=TB;
+  compound=true; newrank=true;
+  fontname="Helvetica-Bold";
+  nodesep=0.55; ranksep=0.30; splines=ortho;
+
+  node [shape=box, style="rounded,filled", fillcolor=white, color="#5b6b7a",
+        fontname="Helvetica", fontsize=20, fixedsize=true, width=2.7, height=0.78];
+  edge [color="#3d4a57", fontname="Helvetica", fontsize=18, arrowsize=0.8, penwidth=1.5];
+
+  xv [label="x_v", fillcolor="#eef1f4", color="#8a97a3"];
+
+  // ---- column A : Hodge controller ----
+  nemb   [label="Neighbor\nembed"];
+  hodge1 [label="PSD-Hodge\nlayer"];
+  hodge2 [label="PSD-Hodge\nlayer"];
+  gro    [label="MLP"];
+  gate   [label="Softmax", fillcolor="#fde3df", color="#c0392b"];
+  // ---- column B : main / expert spine ----
+  emb   [label="MLP"];
+  experts [label="8 vanilla\ntransformers", fillcolor="#eef5fc", color="#7f9dc0"];
+  mix   [label="Weighted\nsum"];
+  lnorm [label="LayerNorm"];
+  dec   [label="Transformer\ndecoder"];
+  out   [label="û", fillcolor="#eef1f4", color="#8a97a3"];
+  // ---- column C : training ----
+  yt    [label="targets y", fillcolor="#fdf7ec", color="#c9ad72"];
+  an    [label="Learned Hodge\nLaplacian"];
+  atoms [label="Diffusion\npowers"];
+  asg   [label="Linear map"];
+  bt    [label="band\ntargets", fillcolor="#fdf7ec", color="#c9ad72"];
+
+  // vertical flow (straight, in column)
+  xv -> nemb; xv -> emb;
+  nemb -> hodge1 -> hodge2 -> gro -> gate;
+  emb -> experts -> mix -> lnorm -> dec -> out;
+  yt -> an -> atoms -> asg -> bt;
+
+  // cross-column couplings
+  gate -> mix [color="#c0392b", penwidth=2.6, constraint=false, xlabel="gate", fontcolor="#b23b2e"];
+  bt -> experts [style=dashed, color="#b8791f", penwidth=1.8, constraint=false, xlabel="ℒ_band", fontcolor="#8a5a12"];
+
+  // grid rows: align across the three columns (Weighted sum pinned to the gate row)
+  { rank=same; nemb;   emb;     yt;  }
+  { rank=same; hodge1; experts; an;  }
+  { rank=same; hodge2;          atoms; }
+  { rank=same; gro;             asg; }
+  { rank=same; gate;   mix;     bt;  }
+
+  // column order A | B | C (flat, no rank effect)
+  nemb -> emb -> yt [style=invis, constraint=false];
+  hodge1 -> experts [style=invis, constraint=false];
+  gate -> mix -> bt [style=invis, constraint=false];
+
+  // lightweight lane grouping
+  subgraph cluster_inf   { style="rounded"; color="#9db8d6"; penwidth=1.6;
+                           label="INFERENCE"; labeljust="l"; fontsize=20; fontname="Helvetica-Bold"; fontcolor="#3f6591";
+                           nemb; hodge1; hodge2; gro; gate; emb; experts; mix; lnorm; dec; out; }
+  subgraph cluster_train { style="rounded"; color="#d8bd8a"; penwidth=1.6;
+                           label="TRAINING"; labeljust="l"; fontsize=20; fontname="Helvetica-Bold"; fontcolor="#9a7b31";
+                           yt; an; atoms; asg; bt; }
+}

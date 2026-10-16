@@ -1,0 +1,91 @@
+// v57_gated_hodge_vef architecture.
+// Render:  dot -Tpng architecture_v57.dot -o architecture_v57.png
+//          dot -Tpdf architecture_v57.dot -o architecture_v57.pdf
+// The INFERENCE PATH (top lane) is the forward pass that runs at test time.
+// The TRAINING lane (bottom, parallel) is the auxiliary supervision that exists
+// only during training; the single dashed edge is the L_band coupling into the model.
+digraph v57 {
+  rankdir=LR;
+  compound=true;
+  fontname="Helvetica";
+  labelloc="t";
+  fontsize=16;
+  label=<<b>v57_gated_hodge_vef</b> &mdash; frequency mixture of experts with a Hodge spectral controller as the gate>;
+  nodesep=0.45; ranksep=0.85; splines=spline; newrank=true;
+
+  node [shape=box, style="rounded,filled", fillcolor=white, color="#5b6b7a",
+        fontname="Helvetica", fontsize=14, margin="0.22,0.15", width=2.1, height=0.85];
+  edge [color="#3d4a57", fontname="Helvetica", fontsize=11, arrowsize=0.9];
+
+  // shared input
+  xv [label="x_v\n(N, 9)", fillcolor="#eef1f4", color="#8a97a3"];
+
+  // =====================  INFERENCE PATH  =====================
+  subgraph cluster_inf {
+    label=<<b>INFERENCE PATH</b>  (forward pass &mdash; runs at test time)>;
+    fontsize=16; labeljust="l";
+    style="rounded,filled"; fillcolor="#eef5fc"; color="#9db8d6";
+
+    // --- Hodge spectral controller (routes; sees the full mesh) ---
+    subgraph cluster_ctrl {
+      label=<<b>Hodge spectral controller</b>  (routes &middot; sees the full simplicial complex; v57: replaces the v53&ndash;56 MLP gate)>;
+      fontsize=13; fontcolor="#b23b2e"; labeljust="l";
+      style="rounded,dashed"; color="#c0392b"; fillcolor="#fdeeec";
+      nemb   [label="Neighbor\nembedding"];
+      hodge1 [label="PSD-Hodge\nlayer 1"];
+      hodge2 [label="PSD-Hodge\nlayer 2"];
+      gro    [label="MLP\n→ K logits"];
+      gate   [label="Softmax\n(per node, over 8 experts)\ng(v) ∈ Δ⁸,  Σₖ gₖ(v)=1",
+              fillcolor="#fde3df", color="#c0392b"];
+      nemb -> hodge1 -> hodge2 -> gro -> gate;
+    }
+
+    // --- expert branch (fits; no mesh) ---
+    emb     [label="MLP\n9 → 192"];
+    experts [label="8 vanilla transformers\nper vertex → reps  z₁(v) … z₈(v)",
+             fillcolor="#eef5fc", color="#7f9dc0"];
+    mix     [label="Weighted sum  (per vertex)\nh(v) = Σₖ₌₁⁸ gₖ(v) · zₖ(v)\na per-node convex combination"];
+    lnorm   [label="LayerNorm"];
+    dec     [label="Transformer\ndecoder"];
+    out     [label="û  (N, 4)\nu_x, u_y, p, ν_t", fillcolor="#eef1f4", color="#8a97a3"];
+
+    emb -> experts;
+    experts -> mix [label="zₖ(v)   (per-node reps)"];
+    mix -> lnorm -> dec -> out;
+    gate -> mix [color="#c0392b", penwidth=2.0, headlabel="× gₖ(v)",
+                 label="per-node weights\ngₖ(v) ∈ Δ⁸", fontcolor="#b23b2e", labeldistance=2.0];
+
+    // how the per-node softmax acts on the mix
+    mixnote [shape=note, fillcolor="#eef5fc", color="#7f9dc0", fontsize=9,
+             label="at each vertex v the softmax gives a weight gₖ(v) to transformer k\n(weights ≥ 0, sum to 1), so the mix is a per-node convex\ncombination; training specialises each transformer to a\nfrequency band, so the gate blends them per node"];
+    mixnote -> mix [style=dotted, arrowhead=none, color="#7f9dc0"];
+  }
+
+  // both branches read the SAME input
+  xv -> nemb [lhead=cluster_ctrl];
+  xv -> emb;
+
+  // =====================  TRAINING (parallel)  =====================
+  subgraph cluster_train {
+    label=<<b>TRAINING ONLY</b>  (parallel auxiliary supervision)>;
+    fontsize=16; labeljust="l";
+    style="rounded,filled"; fillcolor="#fbf3e6"; color="#d8bd8a";
+
+    yt    [label="targets y\n(N, 4)", fillcolor="#fdf7ec", color="#c9ad72"];
+    an    [label="Learned Hodge\nLaplacian"];
+    atoms [label="Diffusion powers\nSᵐ → 9 atoms"];
+    asg   [label="Linear map\n(8×9, column-softmax)"];
+    bt    [label="8 band\ntargets tₖ", fillcolor="#fdf7ec", color="#c9ad72"];
+    yt -> an -> atoms -> asg -> bt;
+
+    obj [shape=note, fillcolor="#fdeecb", color="#c99a3a", fontsize=10,
+         label="objective\nℒ = ℒ_field (disjoint vol/surf)\n + 0.5 ℒ_band + 0.01 ℒ_bal + 1.0 ℒ_floor"];
+  }
+
+  // the one cross-lane coupling: band targets supervise the experts' band heads
+  bt -> experts [style=dashed, color="#b8791f", penwidth=1.4, constraint=false,
+                 label="ℒ_band", fontcolor="#8a5a12"];
+
+  // keep the two lanes stacked (inference above, training below)
+  xv -> yt [style=invis];
+}
