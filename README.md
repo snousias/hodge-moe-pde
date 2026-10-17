@@ -5,7 +5,9 @@
 **Stavros Nousias · Akis Nousias · Konstantinos Gkrispanis**
 Technical University of Munich · K3Y Labs
 
-[Method](#method) · [Paper results](#paper-results) · [Released checkpoint](#released-checkpoint) · [Getting started](#getting-started) · [Training](#training) · [Documentation](#documentation)
+**Paper:** [arXiv:2610.20585](https://arxiv.org/abs/2610.20585) · [Read the PDF](https://arxiv.org/pdf/2610.20585)
+
+[Method](#method) · [Paper results](#paper-results) · [Released checkpoint](#released-checkpoint) · [Getting started](#getting-started) · [Training](#training) · [Documentation](#documentation) · [Citation](#citation)
 
 ![HodgeMoE architecture: a mesh-based Hodge controller routes eight transformer experts, followed by a field decoder; a separate analyzer supplies training targets.](docs/paper/overview_landscape.png)
 
@@ -245,13 +247,23 @@ The release preserves the architecture and training behavior that produced the c
 | [`checkpoints/PROVENANCE.md`](checkpoints/PROVENANCE.md) | Checkpoint origin, training history, and checksum |
 | [`docs/paper/`](docs/paper/) | Figures reproduced from the paper |
 
-## Paper
-
-**Learnable Hodge–Laplacian Driven Mixture of Experts for Steady-PDE Surrogates on Coarse Unstructured Meshes**
-Stavros Nousias, Akis Nousias, and Konstantinos Gkrispanis.
-
-The method description, paper result tables, and figures above follow the supplied manuscript and supplementary material. The released checkpoint's results are documented separately with their evaluation artifacts.
+The method description, paper result tables, and figures above follow the paper and supplementary material. The released checkpoint's results are documented separately with their evaluation artifacts.
 
 ## License
 
 The repository is released under the [MIT License](LICENSE). AirFRANS has its own dataset license and citation requirements; consult the [AirFRANS documentation](https://airfrans.readthedocs.io).
+
+## Citation
+
+Nousias, S., Nousias, A. and Gkrispanis, K., 2026. Learnable Hodge-Laplacian Driven Mixture of Experts for Steady-PDE Surrogates on Coarse Unstructured Meshes. arXiv preprint arXiv:2610.20585.
+
+```bibtex
+@article{nousias2026learnable,
+  title={Learnable {Hodge-Laplacian} Driven Mixture of Experts for {Steady-PDE} Surrogates on Coarse Unstructured Meshes},
+  author={Nousias, Stavros and Nousias, Akis and Gkrispanis, Konstantinos},
+  journal={arXiv preprint arXiv:2610.20585},
+  year={2026},
+  doi={10.48550/arXiv.2610.20585},
+  url={https://arxiv.org/abs/2610.20585}
+}
+```
