@@ -146,7 +146,7 @@ The supplied [environment](environment.yml) specifies Python 3.12 and pins the t
 
 ### Prepare the data
 
-Place the preprocessed AirFRANS mesh pool under `dataset/processed_augmented/`. Follow the [dataset README](dataset/README.md) for contents, placement, and optional raw-data setup. **The Dropbox shared download link is pending.** Existing checkouts may already contain the pool.
+Place the preprocessed AirFRANS mesh pool under `dataset/processed_augmented/`. Follow the [dataset README](dataset/README.md) for contents, placement, and optional raw-data setup. The pool is hosted on Hugging Face at [snousias/hodge-moe-pde-airfrans](https://huggingface.co/datasets/snousias/hodge-moe-pde-airfrans); the dataset README gives the download commands.
 
 ```text
 dataset/

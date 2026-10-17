@@ -14,29 +14,31 @@ dataset/
 
 ## Download the preprocessed dataset
 
-**Dropbox download: pending — the dataset shared link has not been supplied yet.**
+The mesh pool is hosted on Hugging Face:
+<https://huggingface.co/datasets/snousias/hodge-moe-pde-airfrans> (ODbL, derived from AirFRANS).
+It is five tar shards (1.2 GB). To download, verify and unpack them in one step, run:
 
-Download the preprocessed mesh pool from the Dropbox shared link once it is added here.
-Place the extracted `processed_augmented/` folder directly inside this directory:
-`dataset/processed_augmented/<name>__s0.npz`. Avoid an extra nested `dataset/` folder.
-The expected pool contains 6,600 `.npz` mesh files, plus `_global_target_std.npy`
-(6,601 files total, approximately 1.2 GB uncompressed).
+```bash
+bash dataset/download.sh
+```
+
+The script runs from any directory. Equivalent manual steps, from the repository root:
+
+```bash
+cd dataset
+base=https://huggingface.co/datasets/snousias/hodge-moe-pde-airfrans/resolve/main
+wget -q "$base/SHA256SUMS"
+for f in train_0 train_1 train_2 train_3 test; do wget -q "$base/$f.tar"; done
+sha256sum -c SHA256SUMS
+for f in train_0 train_1 train_2 train_3 test; do tar -xf "$f.tar" && rm "$f.tar"; done
+```
+
+This creates `dataset/processed_augmented/` with 6,600 `.npz` mesh files plus
+`_global_target_std.npy` (6,601 files, about 1.2 GB).
 
 The preprocessed pool is required for training and evaluation. The geometry cache is
 built automatically; raw AirFRANS simulations are optional. Downloaded data, caches,
 and preprocessing outputs are covered by [`.gitignore`](.gitignore).
-
-### Existing tracked data
-
-Ignore rules apply to untracked files. This repository currently tracks the mesh pool;
-adding these rules does not remove those files from Git or from past commits. To switch
-to download-only distribution, run this from the repository root, then commit the changes:
-
-```bash
-git rm -r --cached -- dataset/processed_augmented
-```
-
-This keeps the local dataset files on disk. It does not remove data from Git history.
 
 ## `processed_augmented/`: contents (6,601 files, 1.2 GB)
 
