@@ -1,0 +1,65 @@
+# ── Python ──────────────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+venv/
+.venv/
+env/
+
+# ── Run output ──────────────────────────────────────────────────────────────────────────
+# Training runs, evaluation output and sweeps all land under runs/; nothing there belongs in
+# the repository. The released metric arrays and logs live in results/eval_release*/ instead.
+runs/
+wandb/
+datasets/_build/
+nohup.out
+
+# ── Working files that are not part of the release ──────────────────────────────────────
+# Migration, rename and reorganisation helpers are scaffolding for one change on one machine.
+# They are not instructions for anyone cloning this repository, and shipping them makes the
+# tree read like a work in progress rather than a release.
+*UNDO*.sh
+REORG_*.sh
+RENAME_*.sh
+MIGRATE_*.sh
+
+# Editor and tool backups, patch rejects, and half-applied edits.
+*.bak
+*.bak_*
+*.orig
+*.rej
+*.swp
+*.swo
+*~
+*.tmp
+*.tmp.*
+.tmp/
+tmp/
+scratch/
+scratchpad/
+
+# Console transcripts. The two exceptions below are release artifacts: results/README.md and
+# results/eval_release_v/README.md link to them as the evaluation logs behind the published
+# numbers, so they are tracked on purpose.
+*.log
+!results/eval_release/fields.log
+!results/eval_release/lift.log
+!results/eval_release_v/lift.log
+
+# ── Editors and operating systems ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.code-workspace
+.claude/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Internal working documents, not part of the release ────────────────────────────────
+JOURNAL.md

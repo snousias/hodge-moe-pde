@@ -1,0 +1,26 @@
+HodgeMoE-vef test samples: 200 (eval on fixed s0 meshes)
+  global target std (AirFRANS norm): [2.4739020e+01 1.0089690e+01 1.0266355e+03 1.8300000e-03]
+Model params: 3,106,490 | ckpt checkpoints/hodgemoe_vef_best_ep400.pth
+  [40/200] R2mean=0.999
+  [80/200] R2mean=0.999
+  [120/200] R2mean=0.999
+  [160/200] R2mean=0.999
+  [200/200] R2mean=0.998
+
+── HodgeMoE-vef aggregate test metrics (mean over 200 samples, physical) ──
+Field       L2rel    L2rel_c         R²        MSE        MAE       RMSE
+ux         0.0068     0.0237     0.9994     0.2074     0.2625     0.4147
+uy         0.0314     0.0352     0.9987     0.1061     0.1916     0.2964
+p          0.0364     0.0383     0.9985  1366.1541    19.0290    29.9635
+nut        0.0571     0.0593     0.9960     0.0000     0.0000     0.0001
+MEAN       0.0329   (mean per-field relative L2 — headline)
+
+── AirFRANS-native normalised-MSE (Transolver table columns) ──
+Field       VolMSE     SurfMSE
+ux         0.00017     0.00091
+uy         0.00080     0.00190
+p          0.00068     0.00343
+nut        0.00515     0.00185
+VOLUME     0.00170   (mean over fields — benchmark 'Volume' column)
+SURF       0.00202   (mean over fields — benchmark 'Surf' column)
+Saved metrics -> runs/eval/fields/test_metrics.npz

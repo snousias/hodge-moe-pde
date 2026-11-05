@@ -1,0 +1,30 @@
+
+======================================================================================
+METRIC CHECK  variant 'vef'   200 test cases
+  measured in  results/full_eval/vef_hodgemoe_vef_best_ep400
+    from       results/full_eval/vef_hodgemoe_vef_best_ep400/test_metrics.npz
+    from       results/full_eval/vef_hodgemoe_vef_best_ep400/cl_native.npz
+  reference    This repository's own evaluation of this checkpoint (results/eval_release/), produced by scripts/run_eval.sh. NOT the paper's supplementary VEF row, which is a different run: 0.0359 at epoch 560.
+======================================================================================
+metric                                  reference   measured     delta  verdict
+--------------------------------------------------------------------------------------
+rel-L2 (mean over fields)                 0.03290    0.03294      0.1%  PASS (within 2%)
+R2 (mean over fields)                     0.99810    0.99814     -2.2%  PASS
+Volume (normalised MSE, non-wall)         0.00170    0.00170      0.0%  PASS (within 2%)
+Surf (normalised MSE, wall)               0.00202    0.00202      0.0%  PASS (within 2%)
+C_L rel-L2 (wall-band contour)            0.03130    0.03134      0.1%  PASS (within 2%)
+rho_L (Spearman, lift)                    0.99991    0.99991     -3.3%  PASS
+
+per-field rel-L2 (informational, not part of the verdict)
+  field   reference   measured
+  u_x        0.0068     0.0068
+  u_y        0.0314     0.0314
+  p          0.0364     0.0364
+  nu_t       0.0571     0.0571
+
+RESULT: PASS  0 of 6 checked metrics failed
+======================================================================================
+
+PER-CASE agreement with results/eval_release
+  per-case rel-L2: max |Δ| 0.00e+00, mean |Δ| 0.00e+00 over 200 cases
+  per-case C_L pred: max |Δ| 0.00e+00

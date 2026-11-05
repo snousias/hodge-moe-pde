@@ -1,0 +1,44 @@
+# Curated, pinned to the exact versions the released checkpoint was TRAINED with (the parent
+# project's `hodgeformer` env as rebuilt on 2026-10-12: Python 3.12.15, torch 2.14.1+cu130,
+# numpy 2.5.4). Not a raw `conda env export`; it lists only what the code in this folder imports.
+#
+#   conda env create -f environment.yml
+#   conda activate hodgemoe-vef
+#   pip install -e third_party/mesh_opformer -e third_party/mesh_sim -e third_party/mesh_opformer_geodesic
+#
+# PyTorch comes from PIP, not conda (PyTorch stopped publishing conda packages after 2.5). The PyPI
+# wheel `torch==2.14.1` ships its own CUDA 13 runtime and needs an NVIDIA driver >= 580. For CPU
+# only, install `torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu` and set
+# device = "cpu" in config.toml.
+#
+# torch 2.14 note: the code carries small patches torch 2.14.1 needed (constants as 0-dim tensors
+# instead of Python floats: arch/psd_hodge.py star/beta constants, training/losses.py balance term).
+# Only torch 2.14.1 was tested with this release.
+name: hodgemoe-vef
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - torch==2.14.1                 # CUDA 13 build from PyPI (see header)
+      - numpy==2.5.4
+      - scipy==1.18.1
+      - matplotlib==3.11.2
+      - toml==0.10.2
+      - python-graphblas==2025.2.0   # geometry-extraction path (mesh_sim / mesh_opformer_geodesic)
+      - wandb==0.30.0                 # optional: only used if use_wandb = true in config.toml
+      # transitive deps of the vendored third_party/ packages (setup.py install_requires)
+      - scikit-learn==1.9.1           # mesh_opformer
+      - einops==0.8.2                 # mesh_opformer
+      - potpourri3d==1.4.0            # mesh_sim
+      - open3d-cpu==0.20.0            # mesh_sim
+      # OPTIONAL: only eval_lift.py --validate N (cross-check against the AirFRANS library's own
+      # force coefficients; needs dataset/original/). Not in the training env.
+      - airfrans==0.1.5.1
+      # OPTIONAL: only scripts/generate_dataset/ (regenerating processed_augmented/ from raw
+      # AirFRANS). Not required to train, evaluate, or run inference.
+      - torch-geometric==2.8.0
+      - tqdm==4.68.1
+      - gmsh==4.15.2
+      - shapely==2.1.2

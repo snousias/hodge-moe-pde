@@ -1,0 +1,30 @@
+
+======================================================================================
+METRIC CHECK  variant 'v'   200 test cases
+  measured in  results/full_eval/v_hodgemoe_v_best_ep380
+    from       results/full_eval/v_hodgemoe_v_best_ep380/test_metrics.npz
+    from       results/full_eval/v_hodgemoe_v_best_ep380/cl_native.npz
+  reference    Paper headline V row. The arrays in results/eval_release_v/ are that same run, and reproduce these numbers exactly.
+======================================================================================
+metric                                  reference   measured     delta  verdict
+--------------------------------------------------------------------------------------
+rel-L2 (mean over fields)                 0.03000    0.03000     -0.0%  PASS
+R2 (mean over fields)                     0.99830    0.99826      2.1%  PASS (within 25%)
+Volume (normalised MSE, non-wall)         0.00140    0.00140      0.1%  PASS (within 5%)
+Surf (normalised MSE, wall)               0.00164    0.00164     -0.2%  PASS
+C_L rel-L2 (wall-band contour)            0.02250    0.02246     -0.2%  PASS
+rho_L (Spearman, lift)                    0.99988    0.99988     -1.2%  PASS
+
+per-field rel-L2 (informational, not part of the verdict)
+  field   reference   measured
+  u_x        0.0056     0.0056
+  u_y        0.0259     0.0259
+  p          0.0255     0.0255
+  nu_t       0.0629     0.0629
+
+RESULT: PASS  0 of 6 checked metrics failed
+======================================================================================
+
+PER-CASE agreement with results/eval_release_v
+  per-case rel-L2: max |Δ| 1.64e-04, mean |Δ| 4.00e-05 over 200 cases
+  per-case C_L pred: max |Δ| 9.76e-04

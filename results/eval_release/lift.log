@@ -1,0 +1,12 @@
+mesh-native C_L: 200 test samples (own-grid, no 177k interp)
+ckpt checkpoints/hodgemoe_vef_best_ep400.pth
+  [40/200]
+  [80/200]
+  [120/200]
+  [160/200]
+  [200/200]
+
+── MESH-NATIVE force metrics (own grid, no 177k interpolation) ──
+  C_L relative L2 : 0.0313   [lower=better]
+  rho_L (Spearman): 0.9999   [higher=better]
+Saved -> runs/eval/lift/cl_native.npz

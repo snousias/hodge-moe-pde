@@ -1,0 +1,13 @@
+mesh-native C_L: 200 test samples (own-grid, no 177k interp)
+ckpt runs/v57_gated_hodge/airfrans_hodgeformer-airfrans-v57_gated_hodge_ckpt_380.pth
+  [40/200]
+  [80/200]
+  [120/200]
+  [160/200]
+  [200/200]
+
+── MESH-NATIVE force metrics (own grid, no 177k interpolation) ──
+  C_L relative L2 : 0.0225   [lower=better]
+  rho_L (Spearman): 0.9999   [higher=better]
+  [validation] mesh-native TRUE vs library TRUE C_L Spearman = 0.9947 (n=30; ~1.0 confirms the pressure integral captures lift)
+Saved -> runs/v57_gated_hodge/eval_cl_ckpt380/cl_native.npz

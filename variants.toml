@@ -1,0 +1,100 @@
+########################################################################################
+# VARIANT REGISTRY — which config goes with which checkpoint.
+#
+# The two released models are the same architecture at two settings of the controller's
+# `modes` flag. They share the data pipeline, the geometry cache and `norm_stats.npz`;
+# they differ only in `modes` (in `[train.model]` and `[train.model.hodge_gate_kw]`) and
+# in the W&B run name. This file pairs each variant's config with its checkpoint so that
+# one name selects both:
+#
+#   VARIANT=v   bash scripts/run_eval.sh          # -> runs/eval_v/
+#   VARIANT=vef bash scripts/run_eval.sh          # -> runs/eval_vef/
+#   VARIANT=v   bash scripts/run_train.sh         # -> runs/train_v/
+#   python eval_fields.py --variant v --out runs/eval_v/fields
+#   python shared/variants.py --list              # print this table
+#
+# `VARIANT` only supplies defaults. An explicit `CFG=`, `CKPT=` or `STATS=` still wins, and
+# with `VARIANT` unset every script behaves exactly as before (vef + config.toml).
+#
+# `config`, `checkpoint` and `trainer` are what the scripts read. The remaining keys are
+# descriptive and are printed by `--list`; nothing depends on their values.
+#
+# `trainer` is the entry point `scripts/run_train.sh` runs. The two variants were trained at
+# different precisions, and precision lives in the training loop rather than in `arch/`, so each
+# one names its own: `train.py` is the fp32 loop, `train_v.py` the bf16 one. Training a variant
+# with the other entry point reproduces its architecture but not its recipe.
+#
+# `precision` applies to EVALUATION as well. eval_fields.py and eval_lift.py dispatch on the
+# variant to source/cases/<name>/evaluator.py, so `--variant v` evaluates in bf16 — the precision
+# its published metrics were measured in — and `--variant vef` uses the released fp32 evaluators.
+#
+# Each `[<name>.expect]` block is the reference `scripts/run_verify.sh` checks a run against.
+#
+# To register a model of your own, add a block here and pass its name as VARIANT.
+########################################################################################
+
+default = "vef"                 # used when a script is run with no VARIANT and no CFG/CKPT
+
+[v]
+config      = "config_v.toml"
+checkpoint  = "checkpoints/hodgemoe_v_best_ep380.pth"
+trainer     = "train_v.py"          # bf16 autocast, via training/loop_bf16.py
+stats       = "checkpoints/norm_stats.npz"
+eval_dir    = "results/eval_release_v"
+modes       = "v"
+params      = 3023962
+epoch       = 380
+rel_l2      = 0.0300
+precision   = "bf16 autocast"
+description = "Vertex-only routing. The paper's headline V model. Trained and evaluated under bf16 autocast, which this fp32 code does not reproduce exactly — see checkpoints/PROVENANCE.md."
+
+# Reference metrics for `scripts/run_verify.sh`. `rel_l2` and friends are the six headline
+# numbers; `rel_l2_per_field` is [u_x, u_y, p, nu_t].
+#
+# `tol` is a relative tolerance on rel_l2 / volume / surf / cl_rel_l2. `tol_deficit` is a
+# relative tolerance on 1 - r2 and 1 - rho_l: those sit at 0.998 and 0.9999, where a 2% test on
+# the value would pass almost anything. It is looser because the references below are rounded to
+# four or five digits, and at a deficit of 0.0017 that rounding is already worth about 2%.
+#
+# Only a WORSE measurement can fail. A run that beats the reference always passes.
+[v.expect]
+source           = "Paper headline V row. The arrays in results/eval_release_v/ are that same run, and reproduce these numbers exactly."
+tol              = 0.05
+tol_deficit      = 0.25
+rel_l2           = 0.0300
+r2               = 0.9983
+volume           = 0.00140
+surf             = 0.00164
+cl_rel_l2        = 0.0225
+rho_l            = 0.99988
+rel_l2_per_field = [0.0056, 0.0259, 0.0255, 0.0629]
+# 5% rather than vef's 2%: the published V numbers were measured under bf16 autocast and this
+# code evaluates in fp32, so a small shift is expected. The size of that shift has not been
+# measured; run_verify.sh prints the observed difference for every metric, so tighten this once
+# you have run it on your hardware.
+
+[vef]
+config      = "config.toml"
+checkpoint  = "checkpoints/hodgemoe_vef_best_ep400.pth"
+trainer     = "train.py"            # fp32, via training/loop.py — the released trainer
+stats       = "checkpoints/norm_stats.npz"
+eval_dir    = "results/eval_release"
+modes       = "vef"
+params      = 3106490
+epoch       = 400
+rel_l2      = 0.0329
+precision   = "fp32"
+description = "Vertex, edge and face routing. Trained and evaluated in fp32 by this code."
+
+[vef.expect]
+source           = "This repository's own evaluation of this checkpoint (results/eval_release/), produced by scripts/run_eval.sh. NOT the paper's supplementary VEF row, which is a different run: 0.0359 at epoch 560."
+tol              = 0.02
+tol_deficit      = 0.15
+rel_l2           = 0.0329
+r2               = 0.9981
+volume           = 0.00170
+surf             = 0.00202
+cl_rel_l2        = 0.0313
+rho_l            = 0.99991
+rel_l2_per_field = [0.0068, 0.0314, 0.0364, 0.0571]
+# 2%: these numbers came out of this code, in this precision, on this checkpoint.
