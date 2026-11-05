@@ -57,6 +57,10 @@ Training builds a training-geometry cache of about 251 GB and runs for roughly 1
 
 *Overview of the model. The Hodge controller routes transformer experts that combine shared embeddings with positional encodings at different frequency scales. Their representations are mixed and decoded into four fields. During training, a separate analyzer decomposes the reference fields into atoms, which a learned assignment combines into targets for the auxiliary expert heads (dashed path).*
 
+
+
+
+
 ## Abstract
 
 Surrogate models for steady partial differential equations on unstructured meshes often apply a single mixing mechanism to the whole solution. We propose a mixture of experts architecture supervised at different spectral scales. A controller that utilizes learnable Laplacian matrices, referred to as Hodge Controller, receives the mesh geometry and input features and produces per-vertex weights that combine the expert feature vectors. During training, a separate discrete Laplacian $L_0=\star_0^{-1}d_0^{\top}\star_1 d_0$ decomposes the reference fields into scale-dependent targets for auxiliary expert heads. We evaluate the model on AirFRANS, a steady Reynolds-averaged Navier–Stokes (RANS) airfoil benchmark, using remeshed triangular grids with approximately $9.6$k faces and $4.9$k vertices. On the official $800/200$ split, our model achieves $31\%$ lower relative $L_2$ error and $47\%$ lower interior mean squared error than Transolver on the same evaluation meshes, with approximately half as many parameters. Training allocations and checkpoint-selection procedures differ between our model and the baselines.
@@ -68,216 +72,7 @@ Surrogate models for steady partial differential equations on unstructured meshe
 
 The two configurations differ only in the controller's `modes` setting. [`variants.toml`](variants.toml) pairs each one with its checkpoint, so a single name selects both: `VARIANT=v` or `VARIANT=vef`.
 
-## Methodology
 
-### Overview
-
-We propose a mixture of transformer experts for steady-PDE prediction on unstructured meshes, with per-vertex weights computed by a learnable Laplacian controller. The model predicts velocity components $u_x,u_y$, pressure $p$, and turbulent kinematic viscosity $\nu_t$ at the vertices of an unstructured mesh. The prediction path consists of a shared embedding, a controller, transformer experts, and a field decoder, where the controller produces routing weights from vertex, edge, and face features together with the mesh incidence matrices and neighborhood indices. Each expert combines the shared embedding with fixed Fourier positional features and produces both a latent representation and an auxiliary prediction. The aforementioned controller uses two **PSD-Hodge layers**, based on the HodgeFormer architecture.
-
-### Simplicial complex and neighborhoods
-
-The mesh is the simplicial complex $\mathcal M=(V,E,F)$, with $N=|V|$, $N_e=|E|$, and $N_f=|F|$ and signed incidence matrices $d_0\in\mathbb R^{N_e\times N}$ and $d_1\in\mathbb R^{N_f\times N_e}$, with nonzero entries $-1$ or $+1$. The incidence matrices map vertex values to edges and edge values to faces, respectively. For each mesh element $i$, we identify its neighborhood as the set of elements of the same type whose features contribute at $i$. We call this set the *operator support* because it specifies the entries that may be nonzero in row $i$. The stored neighbor list is $\mathcal N^{\mathrm{full}}(i)$, while $\mathcal N(i)\subseteq\mathcal N^{\mathrm{full}}(i)$ denotes the subset used by the controller. Vertex and edge neighbor lists are initially generated from graph-hop rings.
-
-### Input features and input embeddings
-
-We consider the input features $x_v\in\mathbb R^{N\times c_v}$, $x_e\in\mathbb R^{N_e\times c_e}$, and $x_f\in\mathbb R^{N_f\times c_f}$.
-
-$$
-x_v^{\mathrm{raw}}=[\mathrm{pos}^{\mathrm{raw}}_1,\mathrm{pos}^{\mathrm{raw}}_2,A_v^{\mathrm{dual}},u_{\mathrm{in}},v_{\mathrm{in}},\mathrm{SDF},n_x,n_y,\mathrm{is\_wall}],
-$$
-
-where $\mathrm{pos}^{\mathrm{raw}}_1,\mathrm{pos}^{\mathrm{raw}}_2$ are physical coordinate columns, $A_v^{\mathrm{dual}}$ is the barycentric dual area, computed as one third of the sum of incident triangle areas, and SDF denotes signed distance. $u_{\mathrm{in}},v_{\mathrm{in}}$ refer to inlet velocity components, $n_x,n_y$ to the normal vector, and $\mathrm{is\_wall}$ indicates whether a vertex belongs to a wall segment.
-
-For each input feature, Z-score standardization is defined as
-
-$$
-(x_v)_{ij}=\frac{(x_v^{\mathrm{raw}})_{ij}-\mu_j^{\mathrm{in}}}{s_j^{\mathrm{in}}+10^{-8}},
-\qquad j=1,\ldots,c_v,
-$$
-
-where $\mu_j^{\mathrm{in}}$ and $s_j^{\mathrm{in}}$ are computed by sampling the training meshes and the constant value $10^{-8}$ prevents division by zero. The freestream speed is obtained from the inlet velocity components at the marginal vertices, and the dataset scales the velocity components $u_x,u_y$, the pressure $p$, and the turbulent kinematic viscosity $\nu_t$:
-
-$$
-U_\infty=\sqrt{u_{\mathrm{in}}^2+v_{\mathrm{in}}^2},
-\qquad
-\widetilde y=\left[\tfrac{u_x}{U_\infty},\tfrac{u_y}{U_\infty},\tfrac{p}{U_\infty^2},\tfrac{\nu_t}{U_\infty}\right],
-\qquad
-y_{vc}=\frac{\widetilde y_{vc}-\mu_c^{\mathrm{norm}}}{s_c^{\mathrm{norm}}+10^{-8}},
-$$
-
-where $v$ corresponds to vertices, $c$ to output channels, and $\mu_c^{\mathrm{norm}},s_c^{\mathrm{norm}}$ are the mean and standard deviation of the scaled training targets for channel $c$, computed across vertices. $\mu_c^{\mathrm{norm}},s_c^{\mathrm{norm}}$ are reused for all training and test cases. The standardized target is expressed as $y\in\mathbb R^{N\times4}$ and the model output as $\hat u\in\mathbb R^{N\times4}$.
-
-The prediction branch maps the input features to input embeddings, one token per vertex, through a shared two-layer perceptron with GELU activation. All eight experts receive the same token array $h$.
-
-$$
-h=W_2\,\mathrm{GELU}(W_1x_v)\in\mathbb R^{N\times d},\qquad d=192.
-$$
-
-The controller uses a separate neighbor embedding for vertex, edge, and face features and then maps each stream through its own three-layer perceptron, with ReLU after every linear layer. The resulting streams are $h_v\in\mathbb R^{N\times d_c}$, $h_e\in\mathbb R^{N_e\times d_c}$, and $h_f\in\mathbb R^{N_f\times d_c}$. Layer normalization is applied inside the subsequent PSD-Hodge layers.
-
-### Hodge controller
-
-**Learned star operators.** The learned operators follow the approach in HodgeFormer that retains compositions of incidence and Hodge matrices while parameterizing the Hodge matrices through attention. Using the streams defined above, each head first projects the normalized features to $\varphi_i=W_\varphi\mathrm{LN}(h_s)_i$, where $s\in\{v,e,f\}$ and $\varphi_i\in\mathbb R^{d_h}$.
-
-The controller has embedding size $d_c=64$ and $H=4$ heads. The per-head kernel-feature dimension is $d_h=d_c/H=16$.
-
-These projected features determine the interaction between element $i$ and each neighbor $j\in\mathcal N(i)$ through a Gaussian kernel:
-
-$$
-w_{ij}=\exp\left(-\frac{\lVert\varphi_i-\varphi_j\rVert_2^2}{2\sigma^2}\right),
-\qquad \sigma=\operatorname{softplus}(\gamma)+10^{-8}.
-$$
-
-The matrix $\Omega$ assigns a weight to a position if the element belongs to the set of vertices comprising the effective support. We normalize the weights using the row sums $D_i=\sum_j\Omega_{ij}$, with $D=\operatorname{diag}(D_i)$, and combine the resulting operator with the identity:
-
-$$
-\hat S_{ij}=\frac{\Omega_{ij}}{\sqrt{D_iD_j+10^{-8}}},
-\qquad \star x=(1-\beta)x+\beta\hat Sx,
-\qquad \beta=\tfrac12\operatorname{sigmoid}(\alpha).
-$$
-
-The spectral properties of this construction depend on the neighborhood relation. A neighborhood is reciprocal when $j\in\mathcal N(i)$ implies $i\in\mathcal N(j)$. Under this condition, the ideal normalized matrix $D^{-1/2}\Omega D^{-1/2}$ is symmetric and has eigenvalues in $[-1,1]$. The star formed with this ideal normalization is therefore symmetric positive-definite (SPD), with eigenvalues in $[1-2\beta,1]$.
-
-For the mesh faces, no neighborhoods are considered. The face star therefore uses a diagonal form:
-
-$$
-z_i=\frac{\lVert\varphi_i\rVert_2^2}{d_h\sigma^2},
-\qquad (\star_2x)_i=(1-\beta+\beta e^{-z_i})x_i.
-$$
-
-This star scales each face independently, and its diagonal remains positive. Stars labeled as inverse operators have their own learnable parameters and they are not calculated matrix inverses.
-
-**Operator composition.** We denote the learned operators on vertices, edges, and faces by $L_v$, $L_e$, and $L_f$. For one attention head, let $x_v,x_e,x_f$ denote the normalized latent features supplied to that head.
-
-$$
-\begin{aligned}
-L_v &:= \star_0^{-1}(x_v)\cdot d_0^T\cdot\star_1(x_e)\cdot d_0,\\
-L_e &:= d_0\cdot\star_0^{-1}(x_v)\cdot d_0^T\cdot\star_1(x_e)+\star_1^{-1}(x_e)\cdot d_1^T\cdot\star_2(x_f)\cdot d_1,\\
-L_f &:= d_1\cdot\star_1^{-1}(x_e)\cdot d_1^T\cdot\star_2(x_f).
-\end{aligned}
-$$
-
-The vertex operator reads vertex and edge features, the edge operator reads all three feature arrays, and the face operator reads edge and face features. $\star_0^{-1}$ and $\star_1^{-1}$ have separate learnable parameters. The two terms of $L_e$ act on the same projected edge values and their outputs are added. The head outputs are concatenated and projected back to the embedding dimension, as described below.
-
-If the stars in $L_v$ are symmetric positive definite, then $Q=d_0^T\star_1(x_e)d_0$ is symmetric positive semidefinite and
-
-$$
-L_v=\star_0^{-1}(x_v)Q
-\sim\star_0^{-1/2}(x_v)Q\star_0^{-1/2}(x_v).
-$$
-
-Here $\star_0^{-1/2}(x_v)$ denotes the symmetric square root of the independently learned $\star_0^{-1}(x_v)$. Under this assumption, $L_v$ has a real, nonnegative spectrum, although it is generally not symmetric in the Euclidean inner product.
-
-**Routing variants in this repository.** The paper's main controller updates vertex features using the vertex operator. The VEF configuration released here additionally computes the edge and face updates:
-
-| Stream | Operator |
-|---|---|
-| Vertices | $L_v$ |
-| Edges | $L_e$ |
-| Faces | $L_f$ |
-
-The controller reads out the final vertex stream to route the experts. See [architecture and implementation details](source/ARCHITECTURE.md) for an audit of which updates affect the output.
-
-### Transformer experts and decoder
-
-Expert $k$ receives the token array $h$ joined with Fourier features of $\mathrm{pos}\in\mathbb R^{N\times2}$, the two standardized coordinate columns of $x_v$:
-
-$$
-z^0_k=W^k_{\text{in}}\big[\,h\;;\;\sin(2\pi\,\mathrm{pos}\,B_k)\;;\;\cos(2\pi\,\mathrm{pos}\,B_k)\,\big]\in\mathbb R^{N\times d_x},
-\qquad B_k=\sigma_kG_k\in\mathbb R^{2\times n_F},
-$$
-
-where the semicolon joins arrays along the feature dimension, the expert width is $d_x=88$, the number of frequencies is $n_F=8$, and the entries of $G_k$ are drawn once from a standard normal distribution and then held fixed. All projections in this subsection include bias terms, which are omitted from the equations. The scales are geometric, $(\sigma_1,\ldots,\sigma_K)=(1.0,1.7,2.8,4.8,8.0,13.5,22.6,38.0)$, and are the only difference between the experts at initialization.
-
-Each expert consists of 2 transformer blocks that receive as input $z^0_k$. Then multi-head softmax self-attention is applied over all $N$ vertices and a feedforward network with layer normalization. The experts receive no incidence matrices and no neighborhood indices. Two linear maps read the output $z_k$ of the last block: $\operatorname{proj}_k$, which returns an array of width $d$, and $W^k_b$, which returns the auxiliary prediction $\hat b_k\in\mathbb R^{N\times4}$. The auxiliary prediction is supervised against the per-expert target constructed in [Auxiliary targets](#auxiliary-targets) and is not used to form the field prediction.
-
-The controller logits pass through a softmax, which gives weights $g(v)\in\Delta^{K}$ that are nonnegative and sum to one, and the expert representations are combined as
-
-$$
-h_{\text{mix}}(v)=\sum_{k=1}^{K}g_k(v)\operatorname{proj}_k(z_k)(v)\in\mathbb R^{d}.
-$$
-
-The weights set the combination and not the number of experts evaluated, so routing does not reduce expert computation.
-
-Subsequently, the decoder receives as input $h_{\text{mix}}$ and applies layer normalization and dropout to it, yielding $m(v)\in\mathbb R^{d}$, and forms one token per output channel:
-
-$$
-t^0_{vc}=m(v)+E_{\mathrm{field},c},\qquad c=1,\ldots,4.
-$$
-
-### Auxiliary targets
-
-One averaging step replaces each vertex value by a weighted mean of that value and the values at its neighbors. Repeating the step $m$ times mixes each vertex with the vertices within $m$ edges, which attenuates variation finer than $m$ edges and leaves coarser variation almost unchanged. The reference field is averaged at eight increasing step counts, from two to thirty-two. The nine components are the most averaged field, the differences between consecutive averaged fields, and the difference between the reference field and the least averaged one. Each component is the variation that one averaging level retains and the next removes. The components sum to the reference field exactly, whatever the edge weights are. Each expert is trained to reproduce an assigned weighted sum of the components, and the field prediction is trained against the reference fields rather than against the components.
-
-Each expert produces an auxiliary prediction $\hat b_k$, allowing the reference field to be separated into components that vary over different distances on the mesh, and each expert is assigned a combination of them. The separation is produced by repeated local averaging. We define averaging weights on every edge as conductances. The final prediction is trained against the original reference fields and not against these components.
-
-![Target components from fixed graph smoothing: pressure and four components.](figures/frequency_bands.png)
-
-***Target components from fixed graph smoothing.** Pressure and four components constructed using prescribed smoothing steps. The percentages give each component's share of the summed squared norms across all four standardized fields on this mesh.*
-
-**Conductances.** A conductance is a parameter $w_e>0$ assigned to edge $e$. Since the mesh cells differ in size, the number of edges between two vertices is not proportional to the distance between them, and averaging over the unweighted graph would cover different amounts of space. The conductances are computed by an edge network $\mathrm{MLP}$ that maps the $c_e$ features of each edge to a scalar through a hidden layer with GELU activation, and a softplus layer:
-
-$$
-w_e=\operatorname{softplus}(\mathrm{MLP}(x_e))+\epsilon_w,\qquad \epsilon_w=10^{-4}.
-$$
-
-The conductances then define two diagonal operators and a Laplacian:
-
-$$
-\star_1=\operatorname{diag}(w),\qquad \mu=|d_0|^\top w,\qquad
-\star_0=\operatorname{diag}(\mu),\qquad L_0=\star_0^{-1}d_0^\top\star_1d_0,
-$$
-
-where $\mu_v=\sum_{e\ni v}w_e$ is the total conductance of the edges containing vertex $v$. We use signed incidence matrices with nonzero entries $-1$ and $+1$. For any positive conductances
-
-$$
-x^\top d_0^\top\star_1d_0x=\sum_{e=(i,j)}w_e(x_i-x_j)^2\ge0,
-$$
-
-so $L_0$ is positive semidefinite by construction.
-
-**The solution at different spatial scales.** Each smoothing step replaces each vertex value by the conductance-weighted average of its neighbors,
-
-$$
-\bar y_i\leftarrow\tfrac12\bar y_i+\tfrac12\sum_{j\sim i}\frac{w_{ij}}{\mu_i}\bar y_j,
-$$
-
-which is $\bar y\leftarrow(I-\tau L_0)\bar y$ with $\tau=\tfrac12$.
-
-We retain the smoothed fields at $L=8$ step counts,
-
-$$
-(m_0,\ldots,m_{L-1})=(2,4,6,8,12,16,24,32),
-\qquad \bar y^{(j)}=(I-\tau L_0)^{m_j}y,\quad j=0,\ldots,L-1,
-$$
-
-and form $M=L+1=9$ components. We call these components atoms:
-
-$$
-a_0=\bar y^{(L-1)},\qquad
-a_i=\bar y^{(L-1-i)}-\bar y^{(L-i)}\quad(1\le i\le L-1),
-\qquad a_{M-1}=y-\bar y^{(0)}.
-$$
-
-**Assignment.** Given $M=9$ atoms and $K=8$ experts, the target of each expert is a weighted sum of the atoms. For each expert–atom pair we hold a score $\theta\in\mathbb R^{K\times M}$. A softmax function across experts converts the scores of each atom into nonnegative weights:
-
-$$
-P_{km}=\frac{\exp(\theta_{km}/T)}{\sum_{k'=1}^{K}\exp(\theta_{k'm}/T)},
-\qquad T=1,\qquad
-t_k=\sum_{m=0}^{M-1}P_{km}a_m.
-$$
-
-During training, the atoms are frozen when forming the targets. The training loss can therefore update the assignment scores without passing gradients through the atoms. The assignment can combine several atoms in one expert target or distribute one atom across several targets.
-
-### Training objective
-
-We train the final prediction to match the reference fields and each expert's auxiliary output to match its assigned target. Two additional penalties encourage balanced average routing weights and discourage assignments that give an expert a target with a very small share of the total squared target norm. The combined objective is
-
-$$
-\mathcal L=\mathcal L_{\mathrm{vol}}+\mathcal L_{\mathrm{surf}}+\lambda_b\operatorname{mean}_{v,c,k}(\hat b_{vck}-t_{vck})^2+\lambda_{\mathrm{bal}}K\sum_{k=1}^K\big(\bar g_k-\tfrac1K\big)^2+\lambda_{\mathrm{floor}}\sum_{k=1}^K[\mathrm{ReLU}(\rho-p_k)]^2.
-$$
-
-Here $\mathcal L_{\mathrm{vol}}$ and $\mathcal L_{\mathrm{surf}}$ are mean squared errors of the normalized field residual over the non-wall and the wall vertices, $\bar g_k$ is expert $k$'s routing weight averaged over the batch and vertices, and $p_k$ is its assigned target's share of the total squared target norm. We use $(\lambda_b,\lambda_{\mathrm{bal}},\lambda_{\mathrm{floor}})=(0.5,0.01,1.0)$ and $\rho=0.02$.
 
 ## Experiments
 
@@ -356,13 +151,6 @@ The table above compares the models on the official split. Our model has the low
 
 *Pressure $p$ (top) and turbulent viscosity $\nu_t$ (bottom) on the reference colour scales; left to right, the CFD reference, (a) our model, (b) Transolver, (c) PointNet, and (d) the best PSD-star HodgeFormer. Values beneath each model panel are mean relative $L_2$ errors over the $200$ test cases. The models differ more on $\nu_t$ than on $p$; the reference panel shows fine-scale structure in the $\nu_t$ wake.*
 
-### Discussion and conclusion
-
-We propose a Hodge-routed mixture of transformer experts for steady-PDE prediction on unstructured meshes. A learned Hodge Laplacian computes the routing weights, and a separate analyzer constructs multiscale supervision targets. On the AirFRANS working mesh, mean relative $L_2$ and interior mean squared errors decrease by $31\%$ and $47\%$ relative to Transolver, from $0.0436$ to $0.0300$ and from $0.00265$ to $0.00140$, respectively. The largest per-field improvement is in turbulent viscosity, whose relative $L_2$ error decreases by approximately $46\%$, from $0.1158$ to $0.0629$. Introducing the Hodge controller into the learned-band mixture reduces mean relative $L_2$ error from $0.0345$ to $0.0300$, with larger additional gains in velocity and pressure than in turbulent viscosity.
-
-The mean relative $L_2$ error for pressure is lower than Transolver's, while surface and relative lift-coefficient errors are higher: $0.00164$ versus $0.00143$ and $0.0225$ versus $0.0103$, respectively. Both models retain lift rank correlations above $0.9998$, preserving case ordering more accurately than force magnitudes. Pressure errors along the airfoil contour therefore require further examination.
-
-We follow Transolver's evaluation format on the official AirFRANS $800/200$ split, with one training run per configuration and evaluation on a remeshed working mesh of approximately $4.9$K vertices. The results do not establish accuracy at the original CFD resolution or robustness across random seeds. The analyzer's algebraic target reconstruction holds independently of the controller's conditional spectral guarantee. The implementation does not enforce the reciprocal neighborhoods required by that guarantee, and prediction accuracy does not validate it. Every expert is evaluated, and dense attention scales quadratically with mesh size.
 
 ## Released checkpoints
 
