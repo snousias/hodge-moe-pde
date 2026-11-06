@@ -1,221 +1,263 @@
-# Learnable Hodge–Laplacian Driven Mixture of Experts for Steady-PDE Surrogates on Coarse Unstructured Meshes
+# HodgeMoE
 
-> Repository is under construction
+### Learnable Hodge–Laplacian Driven Mixture of Experts for Steady-PDE Surrogates on Coarse Unstructured Meshes
 
-**Stavros Nousias · Akis Nousias · Konstantinos Gkrispanis**
+**Stavros Nousias · Akis Nousias · Konstantinos Gkrispanis**<br>
 Technical University of Munich · K3Y Labs
 
-**Paper:** [arXiv:2610.20585](https://arxiv.org/abs/2610.20585) · [Read the PDF](https://arxiv.org/pdf/2610.20585)
+This repository contains the HodgeMoE implementation for steady-state PDE regression on unstructured meshes.
 
-[Getting started](#getting-started) · [Verification](#verification) · [Training](#training) · [Model](#model) · [Layout](#repository-layout) · [Documentation](#documentation) · [Citation](#citation)
+[Paper](https://arxiv.org/abs/2610.20585) · [PDF](https://arxiv.org/pdf/2610.20585) · [Dataset](https://huggingface.co/datasets/snousias/hodge-moe-pde-airfrans) · [Results](results/full_eval/COMPARISON.md)
 
-Surrogate models for steady partial differential equations on unstructured meshes often apply a single mixing mechanism to the whole solution. We propose a Hodge-routed mixture of transformer experts that learns how much to rely on each expert in different regions of the domain. Supervision at different spectral scales guides the training of the experts. We evaluate the model on the official AirFRAN  split using remeshed triangular meshes with approximately $4.9$k vertices. On these working meshes, our model achieves the lowest mean relative $L_2$ and interior mean squared errors among the evaluated models. Our checkpoint is selected using test-set error, whereas the baselines use the same validation data.
+![Architecture overview](figures/overview_landscape.png)
 
-The release includes two controller configurations:
+[Modules](#modules) · [Experiments](#experiments) · [Pretrained models](#pretrained-models) · [Configuration](#configuration) · [Execution Examples](#execution-examples) · [Documentation](#documentation) · [Citation](#citation)
 
-| Variant | Controller Hodge updates | Parameters | Released checkpoint | Mean relative $L_2$ |
-|---|---|---:|---:|---:|
-| $V$ (`v`) | Vertices | 3,023,962 | Epoch 380 | 0.0300 |
-| VEF (`vef`, default) | Vertices, edges, and faces | 3,106,490 | Epoch 400 | 0.0329 |
+## Modules
 
+The implementation depends on three Python packages:
 
+- [`mesh_sim`](third_party/mesh_sim/): mesh loading and geometric feature extraction.
 
-![Overview of the model. The Hodge controller routes transformer experts. A separate analyzer builds the auxiliary targets during training.](figures/overview_landscape.png)
+- [`mesh_opformer`](third_party/mesh_opformer/): HodgeFormer layers, dataset definitions, and training and evaluation utilities.
 
-*Overview of the model. The Hodge controller routes transformer experts that combine shared embeddings with positional encodings at different frequency scales. Their representations are mixed and decoded into four fields. During training, a separate analyzer decomposes the reference fields into atoms, which a learned assignment combines into targets for the auxiliary expert heads (dashed path).*
+- [`mesh_opformer_geodesic`](third_party/mesh_opformer_geodesic/): geodesic-ring neighbourhood extraction and sparse attention supports.
 
-## Getting started
+Each package uses a `src` directory layout. Install all three packages in a Python environment using editable installations or wheel files.
 
-### 1. Install
+[`source/`](source/) contains the HodgeMoE architecture, dataset definitions, and training and evaluation modules. [`scripts/`](scripts/) contains the execution scripts. The configuration files [`config.toml`](config.toml) and [`config_v.toml`](config_v.toml) are in the repository root.
+
+The reported experiments used Python 3.12, PyTorch 2.14.1, and one NVIDIA RTX 4090 GPU.
+
+Clone the repository and create the environment defined in `environment.yml`:
 
 ```bash
 git clone https://github.com/snousias/hodge-moe-pde.git
 cd hodge-moe-pde
 conda env create -f environment.yml
 conda activate hodgemoe-vef
-pip install -e third_party/mesh_opformer -e third_party/mesh_sim -e third_party/mesh_opformer_geodesic
 ```
 
-The [environment](environment.yml) uses Python 3.12. The training runs use one NVIDIA RTX 4090. For CPU execution, set `device = "cpu"` in [`config.toml`](config.toml). GPU execution is recommended for training and evaluation.
+### Installation in development mode
 
-### 2. Download the dataset
+From the repository root, install each package in editable mode:
 
-The preprocessed AirFRANS mesh pool is published on Hugging Face at [snousias/hodge-moe-pde-airfrans](https://huggingface.co/datasets/snousias/hodge-moe-pde-airfrans) (five tar shards, about 1.2 GB, ODbL). 
+```bash
+cd ./third_party/mesh_sim
+pip install -e .
 
-'download.sh' downloads it, verifies the SHA-256 checksums and unpacks it into `datasets/processed_augmented/`:
+cd ../mesh_opformer
+pip install -e .
+
+cd ../mesh_opformer_geodesic
+pip install -e .
+
+cd ../..
+```
+
+### Installation as wheel packages
+
+Alternatively, build a wheel for each package. Run these commands from the repository root:
+
+```bash
+pip install wheel
+cd ./third_party/mesh_sim
+python setup.py bdist_wheel
+
+cd ../mesh_opformer
+python setup.py bdist_wheel
+
+cd ../mesh_opformer_geodesic
+python setup.py bdist_wheel
+
+cd ../..
+```
+
+Install the generated wheel files:
+
+```bash
+pip install third_party/mesh_sim/dist/*.whl
+pip install third_party/mesh_opformer/dist/*.whl
+pip install third_party/mesh_opformer_geodesic/dist/*.whl
+```
+
+## Experiments
+
+The experiments use the AirFRANS dataset for steady-state PDE regression on remeshed triangular domains. The repository includes two model configurations:
+
+- HodgeMoE–V — vertex controller updates: [`config_v.toml`](config_v.toml), [`train_v.py`](train_v.py).
+- HodgeMoE–VEF — vertex, edge and face controller updates: [`config.toml`](config.toml), [`train.py`](train.py).
+
+### Pretrained models
+
+[`checkpoints/`](checkpoints/) contains pretrained checkpoints and normalization statistics for both configurations.
+
+| Model | Hodge controller updates | Parameters | Mean relative $L_2$ ↓ | Checkpoint |
+|---|---|---:|---:|---|
+| HodgeMoE–V | Vertices | 3.02M | 0.0300 | [Epoch 380](checkpoints/hodgemoe_v_best_ep380.pth) |
+| HodgeMoE–VEF | Vertices, edges, and faces | 3.11M | 0.0329 | [Epoch 400](checkpoints/hodgemoe_vef_best_ep400.pth) |
+
+The results are computed on the 200 official AirFRANS test cases using remeshed triangular domains with approximately 4,900 vertices and interpolated reference fields. The reported error is averaged across the four predicted fields.
+
+[`checkpoints/PROVENANCE.md`](checkpoints/PROVENANCE.md) documents the checkpoints and training histories.
+
+### Configuration
+
+The TOML configuration files specify dataset paths, preprocessing, model architecture, training, and evaluation parameters. Comments in [`config.toml`](config.toml) and [`config_v.toml`](config_v.toml) describe the settings. To enable Weights & Biases logging, set `use_wandb = true` at the top level and configure the `[wandb]` and `[wandb.init]` sections:
+
+```toml
+use_wandb = true
+
+[wandb]
+WANDB_MODE = "online"     # Options: 'online', 'offline', 'disabled'
+name = "hodgemoe-airfrans"
+
+[wandb.init]
+project = "project-name"
+entity = "user-wandb-account"
+```
+
+### Download the data
 
 ```bash
 bash datasets/download.sh
 ```
 
-`wget` or `curl` is required. The [dataset README](datasets/README.md) gives the manual commands, the contents of the pool and the optional raw AirFRANS download.
+The script downloads approximately 1.2 GB of preprocessed mesh data. It requires `wget` or `curl`.
 
-```text
-datasets/
-├── processed_augmented/
-├── cached/
-│   ├── train_geo/
-│   └── test_geo/
-└── original/
-```
+Geometry data is cached on first use. The test and training caches require approximately 8 GB and 251 GB, respectively. Initial geometry preparation takes approximately one minute per mesh. The [dataset documentation](datasets/README.md) describes custom paths and manual setup.
 
+### Execution Examples
 
-### 3. Evaluate
+Run the following training and evaluation commands from the repository root.
 
-Both released checkpoints are included in `checkpoints/`.
+#### Inference
+
+Evaluate HodgeMoE–VEF:
 
 ```bash
 bash scripts/run_eval.sh
+```
+
+Evaluate HodgeMoE–V:
+
+```bash
 VARIANT=v bash scripts/run_eval.sh
 ```
 
-Each run computes field accuracy and mesh-native lift, saves qualitative plots, and writes its outputs under `runs/`. Confirm that the console reports **200 test samples**. The first evaluation builds the test-geometry cache in `datasets/cached/test_geo/`. 
+Each run computes field error and lift metrics, saves field plots, and writes results to `runs/`. Evaluation with an existing geometry cache takes approximately two minutes per model on an RTX 4090.
 
-To evaluate a checkpoint of your own, or to produce more plots:
+#### Training
 
-```bash
-VARIANT=v \
-CKPT=checkpoints/hodgemoe_v_best_ep380.pth \
-STATS=checkpoints/norm_stats.npz \
-OUT=runs/eval_v N_QUAL=8 bash scripts/run_eval.sh
-```
-
-The two evaluation steps can also be run directly:
-
-```bash
-python eval_fields.py --cfg_path config.toml \
-    --ckpt checkpoints/hodgemoe_vef_best_ep400.pth \
-    --stats checkpoints/norm_stats.npz --out runs/eval/fields --n_qual 8
-
-python eval_lift.py --cfg_path config.toml \
-    --ckpt checkpoints/hodgemoe_vef_best_ep400.pth \
-    --stats checkpoints/norm_stats.npz --out runs/eval/lift
-```
-
-### 4. Full test-set evaluation (every checkpoint, every case)
-
-`scripts/run_full_eval.sh` evaluates one or more checkpoints on all 200 test cases. It runs them one after the other, with one forward pass per case. For each checkpoint it writes `per_case.csv` (every metric for every case), a qualitative figure for **every** case in `qual/` (fields, errors and wall pressure), `SUMMARY.md` / `summary.json` with the overall metrics, AoA bands and best/worst cases, and overview figures in `fig/`. For a released checkpoint it also writes `check.txt`, which compares the run against `variants.toml` and, case by case, against the shipped arrays. With several checkpoints, `COMPARISON.md` ranks them.
-
-```bash
-bash scripts/run_full_eval.sh
-VARIANTS=vef RUN=runs/train bash scripts/run_full_eval.sh
-QUAL=0 CACHE_DIR=/path/to/test_geo bash scripts/run_full_eval.sh
-```
-
-**Published results.** The full evaluation of both released checkpoints is in [`results/full_eval/`](results/full_eval/COMPARISON.md): a summary page, per-case CSV and one figure per test case for [$V$](results/full_eval/v_hodgemoe_v_best_ep380/SUMMARY.md) and [VEF](results/full_eval/vef_hodgemoe_vef_best_ep400/SUMMARY.md). 
-
-## Verification
-
-`scripts/run_verify.sh` evaluates a model variant and compares its results with the reference metrics in `variants.toml`. The report shows the measured values alongside the reference values.
-
-```bash
-bash scripts/run_verify.sh
-VARIANTS=v bash scripts/run_verify.sh
-MODE=full bash scripts/run_verify.sh
-bash scripts/run_verify.sh --help
-```
-
-The four stages are `train`, `sweep`, `eval` and `check`. Each variant's output lands in `$OUT_ROOT/<variant>/final/`
-
-## Training
+Train HodgeMoE–VEF with the default configuration:
 
 ```bash
 bash scripts/run_train.sh
-VARIANT=v bash scripts/run_train.sh
-FOREGROUND=1 bash scripts/run_train.sh
 ```
 
-Resume a run using its checkpoint and normalization statistics:
+For HodgeMoE–V, set `VARIANT=v`. Set `FOREGROUND=1` to run training in the current terminal:
+
+```bash
+VARIANT=v FOREGROUND=1 bash scripts/run_train.sh
+```
+
+The training configuration uses AdamW, a maximum learning rate of $10^{-3}$, weight decay of $10^{-4}$, and a 400-epoch OneCycle schedule.
+
+Each batch contains one complete mesh (`batch_size = 1`).
+
+Configure data paths, model settings, losses, and logging in [`config.toml`](config.toml) for VEF or [`config_v.toml`](config_v.toml) for V. Training outputs are saved under `runs/train/` and `runs/train_v/`, respectively.
+
+<details>
+<summary>Resume training and select a checkpoint</summary>
+
+Resume a VEF run with its saved optimizer, scheduler, and normalization statistics:
 
 ```bash
 RESUME=runs/train/<checkpoint>.pth bash scripts/run_train.sh
 ```
 
-The script restores the optimizer and scheduler and continues the existing schedule. Set `OUT` when resuming a run stored outside `runs/train/`. Optional Weights & Biases logging is configured in `config.toml`.
+For a run in a custom directory, set `OUT` to that directory. For V, also set `VARIANT=v`.
 
-To evaluate saved checkpoints:
+Rank saved checkpoints by mean relative $L_2$ over the 200 official test cases:
 
 ```bash
 RUN=runs/train bash scripts/sweep_eval.sh
 ```
 
-The sweep ranks checkpoints by mean relative $L_2$ over the 200 official test cases. The selected checkpoints are epoch 400 for VEF and epoch 380 for $V$.
+The selected release checkpoints are epoch 400 for VEF and epoch 380 for V.
 
-To regenerate the mesh pool from raw AirFRANS, follow [`scripts/generate_dataset/README.md`](scripts/generate_dataset/README.md). Regeneration is optional when the preprocessed pool is available.
+</details>
 
+### Evaluation results
 
+The [model comparison](results/full_eval/COMPARISON.md) summarizes the results for both models. Separate reports for [HodgeMoE–V](results/full_eval/v_hodgemoe_v_best_ep380/SUMMARY.md) and [HodgeMoE–VEF](results/full_eval/vef_hodgemoe_vef_best_ep400/SUMMARY.md) contain aggregate metrics, per-case metrics, and plots of predicted fields, errors, and wall pressure.
 
-## Repository layout
+To generate complete reports for both pretrained models:
 
-```
-scripts/
-  generate_dataset/
-  run_train.sh
-  run_eval.sh
-  run_full_eval.sh
-  sweep_eval.sh
-  run_verify.sh
-datasets/
-source/
-  arch/
-  data/
-  training/
-  evaluation/
-  diagnostics/
-  shared/
-  cases/
-    vef/
-    v/
-  ARCHITECTURE.md
-checkpoints/
-results/
-figures/
-manifest/
-config.toml
-config_v.toml
-variants.toml
-train.py
-train_v.py
-eval_fields.py
-eval_lift.py
-eval_full.py
+```bash
+bash scripts/run_full_eval.sh
 ```
 
-Both variants use the shared `source/arch/` implementation, with controller updates selected by the config's `modes` flag. Variant-specific training and evaluation entry points in `source/cases/` select fp32 for VEF and bf16 autocast for $V$. The data pipeline and normalization statistics are shared.
+Results are saved in `runs/full_eval/`, including a comparison report, a CSV of per-case metrics, and a figure for every test case.
+
+<details>
+<summary>More evaluation options</summary>
+
+Evaluate all checkpoints from a training run:
+
+```bash
+VARIANTS=vef RUN=runs/train bash scripts/run_full_eval.sh
+```
+
+Generate metrics without per-case figures:
+
+```bash
+QUAL=0 bash scripts/run_full_eval.sh
+```
+
+Evaluate a custom checkpoint:
+
+```bash
+VARIANT=vef \
+CKPT=runs/train/<checkpoint>.pth \
+STATS=runs/train/airfrans_norm_stats.npz \
+OUT=runs/eval_custom bash scripts/run_eval.sh
+```
+
+Compare evaluation scores with the supplied reference metrics:
+
+```bash
+bash scripts/run_verify.sh
+VARIANTS=v bash scripts/run_verify.sh
+```
+
+</details>
 
 ## Documentation
 
-| Path | Contents |
+| Resource | Contents |
 |---|---|
-| [`config.toml`](config.toml) | Data paths, architecture, losses, optimizer, and schedule, for VEF routing |
-| [`config_v.toml`](config_v.toml) | The same recipe with vertex-only routing |
-| [`variants.toml`](variants.toml) | Which config pairs with which checkpoint, and the reference metrics |
-| [`source/shared/`](source/shared/) | Path resolution, variant selection, and the metric checker |
-| [`scripts/run_verify.sh`](scripts/run_verify.sh) | Train, sweep, evaluate and check against the reference metrics |
-| [`source/arch/`](source/arch/) | Hodge controller, transformer experts, analyzer, and model |
-| [`source/data/`](source/data/) | Dataset loader, geometry caching, and lift weights |
-| [`source/training/`](source/training/) | Training loop, losses, metrics, and schedules |
-| [`source/evaluation/`](source/evaluation/) | Field and mesh-native lift evaluation |
-| [`source/diagnostics/`](source/diagnostics/) | Analyzer, routing, operator, and expert checks |
-| [`datasets/README.md`](datasets/README.md) | Data setup and mesh-pool details |
-| [`manifest/`](manifest/) | Official AirFRANS split |
-| [`third_party/`](third_party/) | Vendored mesh packages |
-| [`source/ARCHITECTURE.md`](source/ARCHITECTURE.md) | Architecture and operator definitions |
-| [`results/README.md`](results/README.md) | Release metrics, per-field errors, and checkpoint sweeps |
-| [`results/eval_release/`](results/eval_release/), [`results/eval_release_v/`](results/eval_release_v/) | Evaluation arrays and logs for the VEF and $V$ checkpoints |
-| [`results/full_eval/`](results/full_eval/COMPARISON.md) | Full test-set evaluation of both checkpoints: per-case metrics, a figure per case, overall summaries |
-| [`checkpoints/PROVENANCE.md`](checkpoints/PROVENANCE.md) | Checkpoint origins, training histories, and checksums |
-| [`figures/`](figures/) | Figures reproduced from the paper |
+| [Dataset documentation](datasets/README.md) | Downloads, data paths, and dataset contents |
+| [Model architecture](source/ARCHITECTURE.md) | Controller, experts, analyzer, and operator definitions |
+| [Model configurations](variants.toml) | Configurations, checkpoints, and reference metrics |
+| [Release results](results/README.md) | Field errors and checkpoint sweeps |
+| [Complete evaluation](results/full_eval/COMPARISON.md) | Model comparison and per-case visualizations |
+| [Checkpoint details](checkpoints/PROVENANCE.md) | Training histories and checkpoint checksums |
+| [Dataset generation](scripts/generate_dataset/README.md) | Building the mesh pool from raw AirFRANS data |
 
-The model description and overview figure follow the paper and supplementary material. Release metrics refer to the checkpoints listed above and their accompanying evaluation artifacts.
+[`source/`](source/) contains the architecture, data processing, training, and evaluation modules. [`scripts/`](scripts/) contains the execution scripts.
 
 ## License
 
-The repository is released under the [MIT License](LICENSE). AirFRANS has its own dataset license and citation requirements. Consult the [AirFRANS documentation](https://airfrans.readthedocs.io).
+The code is distributed under the [MIT License](LICENSE). The [dataset documentation](datasets/README.md) and [AirFRANS documentation](https://airfrans.readthedocs.io) specify dataset licensing and citation requirements.
 
 ## Citation
 
+Cite the following paper when using this work:
+
 Nousias, S., Nousias, A. and Gkrispanis, K., 2026. Learnable Hodge-Laplacian Driven Mixture of Experts for Steady-PDE Surrogates on Coarse Unstructured Meshes. arXiv preprint arXiv:2610.20585.
+
+BibTeX entry:
 
 ```bibtex
 @article{nousias2026learnable,
